@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title> {{query}} - ssearch96 </title>
+  </head>
+  <body>
+    <script>
+      function redirectToQueryUrl() {
+        var base = "{{url_for('search')}}";
+        var query = document.getElementById("userQuery").value;
+        location.href = base.concat("?query=", query);
+      }
+    </script>
+    <style>
+    .centeredBlock {
+       margin: 0;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      margin-right: -50%;
+      transform: translate(-50%, -50%)
+    }
+    </style>
+    <div class="centeredBlock">
+      <form onsubmit="redirectToQueryUrl();" action="javascript:void(0);">
+        <p>
+          <input id="userQuery" maxlength="25" size="50">
+          <input type="button" value="Найти" onClick="redirectToQueryUrl()">
+        </p>
+      </form>
+    </div>
+  </body>
+</html>

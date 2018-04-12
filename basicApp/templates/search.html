@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title> {{query}} - ssearch96 </title>
+  </head>
+  <body>
+    <script>
+      function redirectToQueryUrl() {
+        var base = "{{url_for('search')}}";
+        var query = document.getElementById("userQuery").value;
+        location.href = base.concat("?query=", query);
+      }
+    </script>
+    <form onsubmit="redirectToQueryUrl();" action="javascript:void(0);">
+      <p style="text-align: center">
+        <input id="userQuery" maxlength="25" size="50" value="{{query}}">
+        <input type="button" value="Найти" onClick="redirectToQueryUrl()">
+      </p>
+    </form>
+    {% for head, id in search_result %}
+      <h2> <a href="https://ru.wikipedia.org/wiki?curid={{id + 1}}">{{head}}</a> </h2>
+    {% endfor %}
+  </body>
+</html>
