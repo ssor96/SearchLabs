@@ -2,7 +2,8 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title> {{query}} - ssearch96 </title>
+    <title> ssearch96 </title>
+    <link rel="shortcut icon" href="{{url_for('static', filename='favicon.ico')}}">
   </head>
   <body>
     <script>
@@ -21,7 +22,12 @@
       margin-right: -50%;
       transform: translate(-50%, -50%)
     }
+    body {
+      background-image: url({{url_for('static', filename='background.gif')}});
+      background-size: cover;
+    }
     </style>
+    <p><h1 style="text-align:center"><font color="white">Ssearch96</font></h1></p>
     <div class="centeredBlock">
       <form onsubmit="redirectToQueryUrl();" action="javascript:void(0);">
         <p>
