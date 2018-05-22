@@ -21,7 +21,7 @@
     </form>
     <h1>Извините пока что искать не могу. 50 ссылок. Вдруг вам повезет</h1>
     {% for head, id in search_result %}
-      <h2> <a href="https://ru.wikipedia.org/wiki?curid={{id + 1}}">{{head}}</a> </h2>
+      <h2> <a target="_blank" href="https://ru.wikipedia.org/wiki?curid={{id}}">{{head}}</a> </h2>
     {% endfor %}
   </body>
 </html>
