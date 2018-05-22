@@ -10,7 +10,7 @@ from collections import defaultdict
 # stem = SnowballStemmer('russian')
 # tokenizer = MosesTokenizer('ru')
 
-d = defaultdict(int)
+# d = defaultdict(int)
 tok_to_int = dict()
 current_doc_id = 1
 #article_titles = open('Index/article_titles.txt', 'w')
@@ -20,28 +20,14 @@ def memorize_and_count(f):
     def wrapper(s):
         if s not in w:
             w[s] = f(s)
-        d[w[s]] += 1
+        # d[w[s]] += 1
         return w[s]
     return wrapper
 
 
-def mem(f):
-    w = dict()
-    def wrapper(s):
-        if s not in w:
-            w[s] = f(s)
-        return w[s]
-    return wrapper
-
-
-@memorize_and_count
+# @memorize_and_count
 def normalize(token):
-    token = token.lower()
-    # for c in token:
-    #   if c in alp:
-    #       token = stem.stem(token)
-    #       break
-    return token
+    return token.lower()
 
 
 def get_id(s):
@@ -69,7 +55,6 @@ def parse_str(s):
     return res
 
 
-@mem
 def mkstr(a):
     return bytes([(a >> (8 * i)) & 255 for i in range(4)])
 
@@ -84,13 +69,9 @@ def parse_file(file_name):
     tokens = set()
     doc = []
     for s in file_in:
-        # if s.startswith('<doc ') or s.startswith('</doc>'):
-        #   file_out.write(s + '\n')
-        # else:
-        #   file_out.write('\n'.join(parse_str(s)) + '\n')
         if s.startswith('<doc '):
-            # str_current_doc_id = mkstr(current_doc_id)
             l = s.split('"') # [id=, id, url=, url, title=, title]
+            tokens.update(parse_str(l[5]))
             article_titles.write(l[1] + ' ' + l[5] + '\n')
         elif s.startswith('</doc>'):
             doc += [(tok, current_doc_id) for tok in tokens]
@@ -132,14 +113,11 @@ if __name__ == '__main__':
     mid = time.time()
     cpu_mid = time.clock()
     print(mid - start, cpu_mid - cpu_start)
-    s = 0
-    cnt = 0
-    for t in d.items():
-        cnt += t[1]
-        s += len(t[0]) * t[1]
-    print(time.time() - mid, time.clock() - cpu_mid)
-    print(time.time() - start, time.clock() - cpu_start)
-    print('tokens =', cnt, ' s =', s, ' mid =', s / cnt)
-    # f = open('tokens4.txt', 'w')
-    # for t in sorted(d.items(), key = lambda x: -x[1]):
-    #   print(*t, file=f)
+    # s = 0
+    # cnt = 0
+    # for t in d.items():
+    #     cnt += t[1]
+    #     s += len(t[0]) * t[1]
+    # print(time.time() - mid, time.clock() - cpu_mid)
+    # print(time.time() - start, time.clock() - cpu_start)
+    print('did =', current_doc_id)
