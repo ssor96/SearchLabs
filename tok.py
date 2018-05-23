@@ -13,6 +13,7 @@ from collections import defaultdict
 # d = defaultdict(int)
 tok_to_int = dict()
 current_doc_id = 1
+df = defaultdict(int)
 #article_titles = open('Index/article_titles.txt', 'w')
 
 def memorize_and_count(f):
@@ -67,22 +68,32 @@ def parse_file(file_name):
     path = Path(output_file_name)
     path.parent.mkdir(parents=True, exist_ok=True)
     tokens = set()
+    tf = defaultdict(int)
     doc = []
     for s in file_in:
         if s.startswith('<doc '):
+            tf = defaultdict(int)
             l = s.split('"') # [id=, id, url=, url, title=, title]
-            tokens.update(parse_str(l[5]))
+            cur_toks = parse_str(l[5])
+            for tok in cur_toks:
+                tf[tok] += 1
+            tokens.update(cur_toks)
             article_titles.write(l[1] + ' ' + l[5] + '\n')
         elif s.startswith('</doc>'):
-            doc += [(tok, current_doc_id) for tok in tokens]
+            for tok in tokens:
+                df[tok] += 1
+                doc.append((tok, current_doc_id, tf[tok]))
             tokens = set()
             current_doc_id += 1
         else:
-            tokens.update(parse_str(s))
+            cur_toks = parse_str(s)
+            for tok in cur_toks:
+                tf[tok] += 1
+            tokens.update(cur_toks)
     file_in.close()
     file_out = open(output_file_name, 'wb')
-    for tokId, docId in sorted(doc):
-        file_out.write(mkstr(tokId) + mkstr(docId))
+    for tokId, docId, tf in sorted(doc):
+        file_out.write(mkstr(tokId) + mkstr(docId) + mkstr(tf))
     file_out.close()
 
 
@@ -107,9 +118,13 @@ if __name__ == '__main__':
     start = time.time()
     cpu_start = time.clock()
     token_dict = open('Index/token_dict.txt', 'w')
+    stat = open('Index/stat', 'wb')
+    stat.write(mkstr(current_doc_id - 1))
     for tok, idx in sorted(tok_to_int.items(), key = lambda x:x[1]):
         token_dict.write(tok + '\n')
+        stat.write(mkstr(df[tok]))
     token_dict.close()
+    stat.close()
     mid = time.time()
     cpu_mid = time.clock()
     print(mid - start, cpu_mid - cpu_start)
@@ -120,4 +135,3 @@ if __name__ == '__main__':
     #     s += len(t[0]) * t[1]
     # print(time.time() - mid, time.clock() - cpu_mid)
     # print(time.time() - start, time.clock() - cpu_start)
-    print('did =', current_doc_id)

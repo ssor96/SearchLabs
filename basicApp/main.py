@@ -1,6 +1,7 @@
 import os
 import sys
 sys.path.append('../')
+import time
 from tok import is_valid_symbol, normalize
 from flask import Flask, request, render_template, send_from_directory
 
@@ -157,6 +158,7 @@ def favicon():
 @app.route('/search')
 def search():
     global current_res, current_query
+    start = time.time()
     query = request.args.get('query')
     print('raw query:', query)
     print(tok_to_int.get(normalize(query), 0))
@@ -169,8 +171,8 @@ def search():
     if len(q_toks) == 0:
         return 'Empty request'
 
-    prepared = prepare_query(q_toks)
-    if not prepared:
+    prepared = str(int(boolean)) + prepare_query(q_toks)
+    if len(prepared) == 1:
         return 'Wrong request format'
     print('User req', prepared)
     if prepared != current_query:
@@ -184,7 +186,10 @@ def search():
             break
         search_result.append(article_titles[current_res[offset + i] - 1])
     return render_template("search.html", query=query, 
-                                         search_result=search_result)
+                                         search_result=search_result,
+                                         total=len(current_res),
+                                         offset=offset,
+                                         tim=time.time() - start)
 
 
 if __name__ == "__main__":
