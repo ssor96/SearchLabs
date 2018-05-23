@@ -4,11 +4,17 @@ sys.path.append('../')
 from tok import is_valid_symbol, normalize
 from flask import Flask, request, render_template, send_from_directory
 
+path_cpp_py = '/tmp/pipeCppPy'
+path_py_cpp = '/tmp/pipePyCpp'
+
 app = Flask(__name__)
 article_titles = []
 tok_to_int = {}
+current_res = []
+current_query = ''
 
 def parse_req(s):
+    print(len(tok_to_int))
     l = []
     cur = ''
     boolean = False
@@ -124,11 +130,18 @@ def prepare_query(l):
 
 
 def get_response_from_engine():
-    return list(range(1, 51))
+    with open(path_cpp_py, 'r') as f:
+        s = f.readline()
+    # print('get "', s, '"')
+    global current_res
+    current_res = [int(x) for x in s.split()]
 
 
 def send_req_to_engine(req):
-    pass
+    print('send', req)
+    with open(path_py_cpp, 'w') as f:
+        f.write(req + '\n')
+
 
 @app.route('/')
 def index():
@@ -143,7 +156,11 @@ def favicon():
 
 @app.route('/search')
 def search():
+    global current_res, current_query
     query = request.args.get('query')
+    print('raw query:', query)
+    print(tok_to_int.get(normalize(query), 0))
+    offset = request.args.get('offset', 0)
     if query is None:
         return "Wrong request"
     if len(query) > 500:
@@ -155,18 +172,24 @@ def search():
     prepared = prepare_query(q_toks)
     if not prepared:
         return 'Wrong request format'
-    send_req_to_engine(prepared)
-    res = get_response_from_engine()
+    print('User req', prepared)
+    if prepared != current_query:
+        current_query = prepared
+        send_req_to_engine(prepared)
+        get_response_from_engine()
+    print(current_res)
     search_result = []
     for i in range(50):
-        if i >= len(res):
+        if offset + i >= len(current_res):
             break
-        search_result.append(article_titles[res[i] - 1])
+        search_result.append(article_titles[current_res[offset + i] - 1])
     return render_template("search.html", query=query, 
                                          search_result=search_result)
 
 
 if __name__ == "__main__":
+    if not os.path.exists(path_py_cpp):
+        os.mkfifo(path_py_cpp)
     with open('../Index/article_titles.txt', 'r') as f:
         for line in f:
             wid, title = line.split(' ', 1) 
@@ -174,7 +197,7 @@ if __name__ == "__main__":
     with open('../Index/token_dict.txt', 'r') as f:
         cur = 1
         for token in f:
-            tok_to_int[token] = cur
+            tok_to_int[token.strip()] = cur
             cur += 1
     print('READ ALL, START APP...')
     app.run(debug=True)

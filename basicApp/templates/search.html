@@ -19,9 +19,9 @@
         <input type="button" value="Найти" onClick="redirectToQueryUrl()">
       </p>
     </form>
-    <h1>Извините пока что искать не могу. 50 ссылок. Вдруг вам повезет</h1>
+    <h3>Результаты по запросу {{query}}</h3>
     {% for head, id in search_result %}
-      <h2> <a target="_blank" href="https://ru.wikipedia.org/wiki?curid={{id}}">{{head}}</a> </h2>
+      <h3> <a target="_blank" href="https://ru.wikipedia.org/wiki?curid={{id}}">{{head}}</a> </h3>
     {% endfor %}
   </body>
 </html>

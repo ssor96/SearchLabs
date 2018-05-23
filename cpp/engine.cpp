@@ -1,4 +1,9 @@
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <cstdio>
+#include <cstring>
 #include "ListIterator.h"
 #include "ListIteratorRead.h"
 #include "ListIteratorNot.h"
@@ -40,7 +45,6 @@ void buildTree(ListIterator *&cur, char *query, int &pos) {
             num = num * 10 + query[pos] - '0';
             pos++;
         }
-        printf("%d\n", num);
         cur = (ListIterator*)new ListIteratorRead(w[num], sizes[num]);
     }
     else {
@@ -55,7 +59,6 @@ int main() {
         printf("Critical error: error while reading wocabluary size\n");
         return 1;
     }
-    printf("%d\n", wocabluarySize);
     sizes = new int[wocabluarySize + 1];
     sizes[0] = 0;
     if (fread(sizes + 1, sizeof(int), wocabluarySize, sizesIn) != wocabluarySize) {
@@ -72,24 +75,36 @@ int main() {
             return 1;
         }
     }
+    printf("READ\n");
     // FILE *stat = fopen("Index/stat");
     // fread(&numberOfArticles, sizeof(int), 1, stat);
     // fclose(stat);
-    char buf[65000];
-    printf("READY\n");
-
-    while (scanf("%[^\n]s", buf) == 1) {
-        getchar();
+    FILE *fdPyCpp, *fdCppPy;
+    char *fifoPyCpp = "/tmp/pipePyCpp";
+    char *fifoCppPy = "/tmp/pipeCppPy";
+    mkfifo(fifoCppPy, 0666);
+    const int BUF_SIZE = 500000;
+    char buf[BUF_SIZE];
+    
+    for (;;) {
+        fdPyCpp = fopen(fifoPyCpp, "r");
+        fscanf(fdPyCpp, "%[^\n]s", buf);
+        printf("GET %s\n", buf);
+        fgetc(fdPyCpp);
+        fclose(fdPyCpp);
         ListIterator *queryIterator;
         int pos = 0;
         buildTree(queryIterator, buf, pos);
+        fdCppPy = fopen(fifoCppPy, "w");
         while (queryIterator->ok) {
-            printf("%d ", queryIterator->cur);
+            fprintf(fdCppPy, "%d ", queryIterator->cur);
             queryIterator->next();
         }
-        printf("\n");
+        fprintf(fdCppPy, "\n");
+        fclose(fdCppPy);
         delete queryIterator;
     }
+    // unlink(fifoCppPy);
     delete [] sizes;
     for (int i = 1; i <= wocabluarySize; ++i) {
         delete [] w[i];
