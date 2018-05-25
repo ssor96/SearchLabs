@@ -65,6 +65,11 @@ void buildTree(ListIterator *&cur, char *query, int &pos, map<int, int> &tfQ) {
 
 void rankDocs(vector<int> &filtred, map<int, int> &tfQ, vector<pair<double, int>> &res, bool isBoolean) {
     map<int, double> score;
+    if (isBoolean) {
+        for (int docId: filtred) {
+            score[docId] = 0;
+        }
+    }
     for (auto &it: tfQ) {
         for (int i = 0; i < sizes[it.first]; ++i) {
             int docId = w[it.first][i];
@@ -112,12 +117,12 @@ int main() {
             return 1;
         }
     }
-    
+    fclose(in);
 
     FILE *stat = fopen("Index/stat", "rb");
     df = new int[wocabluarySize + 1];
-    len = new double[numberOfArticles + 1];
     fread(&numberOfArticles, sizeof(int), 1, stat);
+    len = new double[numberOfArticles + 1];
     fread(df + 1, sizeof(int), wocabluarySize, stat);
     fread(len + 1, sizeof(double), numberOfArticles, stat);
     fclose(stat);

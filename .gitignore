@@ -1,5 +1,6 @@
 basicApp/static/*
 Index/*
 Articles/*
-*Log
+log/*
+__pycache__/*
 *.out

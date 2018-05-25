@@ -104,7 +104,7 @@ def parse_dir(dir_name):
             parse_dir(child_name)
         else:
             parse_file(child_name)
-            # print(child_name)
+            print(child_name)
 
 
 if __name__ == '__main__':

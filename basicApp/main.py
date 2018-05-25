@@ -162,7 +162,10 @@ def search():
     query = request.args.get('query')
     print('raw query:', query)
     print(tok_to_int.get(normalize(query), 0))
-    offset = request.args.get('offset', 0)
+    try:
+        offset = int(request.args.get('offset', 0))
+    except:
+        return "Wrong offset value"
     if query is None:
         return "Wrong request"
     if len(query) > 500:
@@ -179,13 +182,12 @@ def search():
         current_query = prepared
         send_req_to_engine(prepared)
         get_response_from_engine()
-    print(current_res)
     search_result = []
     for i in range(50):
         if offset + i >= len(current_res):
             break
         search_result.append(article_titles[current_res[offset + i] - 1])
-    return render_template("search.html", query=query, 
+    return render_template("serp.html", query=query, 
                                          search_result=search_result,
                                          total=len(current_res),
                                          offset=offset,

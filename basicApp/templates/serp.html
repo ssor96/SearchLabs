@@ -7,15 +7,16 @@
   </head>
   <body>
     <script>
-      function redirectToQueryUrl() {
+      function redirectToQueryUrl(offset) {
         var base = "{{url_for('search')}}";
         var query = document.getElementById("userQuery").value;
-        location.href = base.concat("?query=", query);
+        query = query.replace(/\&/g, "%26");
+        location.href = base.concat("?query=", query, '&offset=', offset);
       }
     </script>
     <form onsubmit="redirectToQueryUrl(0);" action="javascript:void(0);">
       <p style="text-align: center">
-        <input id="userQuery" maxlength="25" size="50" value="{{query}}">
+        <input id="userQuery" size="50" value="{{query}}">
         <input type="button" value="Найти" onClick="redirectToQueryUrl(0)">
       </p>
     </form>
@@ -24,8 +25,8 @@
       <h3> <a target="_blank" href="https://ru.wikipedia.org/wiki?curid={{id}}">{{head}}</a> </h3>
     {% endfor %}
     <p>
-      <input type="button" value="<= Туда" onClick="redirectToQueryUrl({{max(0, offset - 50)}})">
-      <input type="button" value="Сюда =>" onClick="redirectToQueryUrl({{offset + 50)}})">
+      <input type="button" value="<= Туда" onClick="redirectToQueryUrl({{offset - 50}})">
+      <input type="button" value="Сюда =>" onClick="redirectToQueryUrl({{offset + 50}})">
     </p>
   </body>
 </html>
