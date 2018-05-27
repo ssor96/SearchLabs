@@ -133,7 +133,7 @@ def prepare_query(l):
 def get_response_from_engine():
     with open(path_cpp_py, 'r') as f:
         s = f.readline()
-    # print('get "', s, '"')
+    print('get "', s, '"')
     global current_res
     current_res = [int(x) for x in s.split()]
 

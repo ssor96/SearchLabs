@@ -1,0 +1,43 @@
+h1 {
+    margin: 1em 0 0.5em 0;
+    color: white;
+    font-weight: normal;
+    font-family: 'Ultra', sans-serif;  
+    font-size: 36px;
+    line-height: 42px;
+    text-transform: uppercase;
+    text-shadow: 0 2px white, 0 3px #777;
+}
+form {
+  position: relative;
+  width: 300px;
+  margin: 0 auto;
+}
+input {
+  width: 95%;
+  height: 42px;
+  padding-left: 0px;
+  border: 2px solid #4169E1;
+  border-radius: 5px;
+  outline: none;
+  background: #F9F0DA;
+  color: #000000;
+  font-size: 24px;
+}
+button {
+  position: absolute; 
+  top: 0;
+  right: 0px;
+  width: 42px;
+  height: 48px;
+  border: none;
+  background: #4169E1;
+  border-radius: 0 5px 5px 0;
+  cursor: pointer;
+}
+button:before {
+  content: "\f002";
+  font-family: FontAwesome;
+  font-size: 16px;
+  color: #F9F0DA;
+}

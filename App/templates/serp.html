@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <title> {{query}} - ssearch96 </title>
     <link rel="shortcut icon" href="{{url_for('static', filename='favicon.ico')}}">
+    <link href="favicon.ico" rel="shortcut icon" type="image/x-icon" />
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='style.css')}}"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
   </head>
   <body>
     <script>
@@ -14,10 +17,16 @@
         location.href = base.concat("?query=", query, '&offset=', offset);
       }
     </script>
+    <style>
+    body {
+      background-color: #F9CFAA;
+      /*background-size: cover;*/
+    }
+    </style>
     <form onsubmit="redirectToQueryUrl(0);" action="javascript:void(0);">
-      <p style="text-align: center">
+      <p>
         <input id="userQuery" size="50" value="{{query}}">
-        <input type="button" value="Найти" onClick="redirectToQueryUrl(0)">
+        <button type="button" value="Найти" onClick="redirectToQueryUrl()" ></button>
       </p>
     </form>
     <h3>Результаты по запросу {{query}} ({{total}} документов, {{tim}} cек.)</h3>
