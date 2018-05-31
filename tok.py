@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import time
+from struct import pack
 from pathlib import Path
 from collections import defaultdict
 # from nltk.stem.snowball import SnowballStemmer
@@ -12,7 +13,7 @@ from collections import defaultdict
 
 # d = defaultdict(int)
 tok_to_int = dict()
-current_doc_id = 1
+current_doc_id = 0
 df = defaultdict(int)
 #article_titles = open('Index/article_titles.txt', 'w')
 
@@ -56,8 +57,13 @@ def parse_str(s):
     return res
 
 
-def mkstr(a):
-    return bytes([(a >> (8 * i)) & 255 for i in range(4)])
+def get_path_to_text_file(doc_id):
+    str_doc_id = str(doc_id)
+    str_doc_id = '0' * (7 - len(str_doc_id)) + str_doc_id
+    path_to_text_file = os.path.join(str_doc_id[:2],
+                                     str_doc_id[2:4],
+                                     str_doc_id[4:])
+    return path_to_text_file
 
 
 def parse_file(file_name):
@@ -65,18 +71,33 @@ def parse_file(file_name):
     global current_doc_id
     file_in = open(file_name, 'r')
     output_file_name = os.path.join('Index/Parts', file_name)
-    path = Path(output_file_name)
-    path.parent.mkdir(parents=True, exist_ok=True)
     tokens = set()
     tf = defaultdict(int)
     doc = []
+    small_index = []
+    tok_pos = 0
     for s in file_in:
         if s.startswith('<doc '):
+            path_to_article = get_path_to_text_file(current_doc_id)
+            if path_to_article.endswith('000'):
+                path = Path(os.path.join('Index/Text', path_to_article))
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path = Path(os.path.join('Index/Small_Index', path_to_article))
+                path.parent.mkdir(parents=True, exist_ok=True)
+            article_text = open(os.path.join('Index/Text', 
+                                             path_to_article), 'w')
+            article_index = open(os.path.join('Index/Small_Index', 
+                                             path_to_article), 'wb')
+            small_index = []
+            tok_pos = 0
             tf = defaultdict(int)
             l = s.split('"') # [id=, id, url=, url, title=, title]
+            article_text.write(l[5] + '\n')
             cur_toks = parse_str(l[5])
             for tok in cur_toks:
                 tf[tok] += 1
+                small_index.append((tok, tok_pos))
+                tok_pos += 1
             tokens.update(cur_toks)
             article_titles.write(l[1] + ' ' + l[5] + '\n')
         elif s.startswith('</doc>'):
@@ -85,19 +106,32 @@ def parse_file(file_name):
                 doc.append((tok, current_doc_id, tf[tok]))
             tokens = set()
             current_doc_id += 1
+            article_text.close()
+            prev_tok = 0
+            for tok, pos in sorted(small_index):
+                if tok != prev_tok:
+                    prev_tok = tok
+                    article_index.write(pack('<II', tok, tf[tok]))
+                article_index.write(pack('<I', pos))
+            article_index.close()
         else:
+            article_text.write(s)
             cur_toks = parse_str(s)
             for tok in cur_toks:
                 tf[tok] += 1
+                small_index.append((tok, tok_pos))
+                tok_pos += 1
             tokens.update(cur_toks)
     file_in.close()
     file_out = open(output_file_name, 'wb')
-    for tokId, docId, tf in sorted(doc):
-        file_out.write(mkstr(tokId) + mkstr(docId) + mkstr(tf))
+    for tok_id, doc_id, tf in sorted(doc):
+        file_out.write(pack('<III', tok_id, doc_id, tf))
     file_out.close()
 
 
 def parse_dir(dir_name):
+    path = Path(os.path.join('Index/Parts', dir_name))
+    path.parent.mkdir(parents=True, exist_ok=True)
     for name in sorted(os.listdir(dir_name)):
         child_name = os.path.join(dir_name, name)
         if os.path.isdir(child_name):
@@ -118,11 +152,11 @@ if __name__ == '__main__':
     start = time.time()
     cpu_start = time.clock()
     token_dict = open('Index/token_dict.txt', 'w')
-    stat = open('Index/stat', 'wb')
-    stat.write(mkstr(current_doc_id - 1))
+    stat = open('Index/pre_stat', 'wb')
+    stat.write(pack('<I', current_doc_id - 1))
     for tok, idx in sorted(tok_to_int.items(), key = lambda x:x[1]):
         token_dict.write(tok + '\n')
-        stat.write(mkstr(df[tok]))
+        stat.write(pack('<I', df[tok]))
     token_dict.close()
     stat.close()
     mid = time.time()
