@@ -153,8 +153,8 @@ if __name__ == '__main__':
     cpu_start = time.clock()
     token_dict = open('Index/token_dict.txt', 'w')
     stat = open('Index/pre_stat', 'wb')
-    stat.write(pack('<I', current_doc_id - 1))
-    for tok, idx in sorted(tok_to_int.items(), key = lambda x:x[1]):
+    stat.write(pack('<I', current_doc_id))
+    for tok, _ in sorted(tok_to_int.items(), key = lambda x:x[1]):
         token_dict.write(tok + '\n')
         stat.write(pack('<I', df[tok]))
     token_dict.close()

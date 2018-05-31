@@ -122,9 +122,9 @@ int main() {
     FILE *stat = fopen("Index/stat", "rb");
     df = new int[wocabluarySize + 1];
     fread(&numberOfArticles, sizeof(int), 1, stat);
-    len = new double[numberOfArticles + 1];
+    len = new double[numberOfArticles];
     fread(df + 1, sizeof(int), wocabluarySize, stat);
-    fread(len + 1, sizeof(double), numberOfArticles, stat);
+    fread(len, sizeof(double), numberOfArticles, stat);
     fclose(stat);
     
     printf("READ\n");
@@ -165,9 +165,13 @@ int main() {
         fclose(fdCppPy);
     }
     // unlink(fifoCppPy);
-    delete [] sizes;
     for (int i = 1; i <= wocabluarySize; ++i) {
         delete [] w[i];
+        delete [] tf[i];
     }
+    delete [] sizes;
     delete [] w;
+    delete [] tf;
+    delete [] df;
+    delete [] len;
 }

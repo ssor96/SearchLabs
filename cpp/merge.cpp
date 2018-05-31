@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
     int numberOfArticles;
     fread(&numberOfArticles, sizeof(int), 1, stat);
     fclose(stat);
-    double *sqLen = new double[numberOfArticles + 1];
+    double *sqLen = new double[numberOfArticles];
     FILE *output = fopen("Index/merged", "wb");
     static int tf[6000000];
     int p = 0;
@@ -77,16 +77,16 @@ int main(int argc, char **argv) {
     }
     fwrite(tf, sizeof(int), p, output);
     fclose(output);
-    stat = fopen("Index/stat", "ab");
-    for (int i = 1; i <= numberOfArticles; ++i) {
-        sqLen[i] = sqrt(sqLen[i]);
-    }
-    fwrite(sqLen + 1, sizeof(double), numberOfArticles, stat);
-    delete [] sqLen;
     sizes.push_back(curSz);
     output = fopen("Index/sizes", "wb");
     curSz = sizes.size();
     fwrite(&curSz, sizeof(int), 1, output);
     fwrite(sizes.data(), sizeof(int), curSz, output);
     fclose(output);
+    stat = fopen("Index/stat", "ab");
+    for (int i = 0; i < numberOfArticles; ++i) {
+        sqLen[i] = sqrt(sqLen[i]);
+    }
+    fwrite(sqLen, sizeof(double), numberOfArticles, stat);
+    delete [] sqLen;
 }
