@@ -71,12 +71,14 @@ void rankDocs(vector<int> &filtred, map<int, int> &tfQ, vector<pair<double, int>
         }
     }
     for (auto &it: tfQ) {
+        double idf = 1.0 * numberOfArticles / df[it.first];
         for (int i = 0; i < sizes[it.first]; ++i) {
             int docId = w[it.first][i];
             int tfD = tf[it.first][i];
             auto it2 = lower_bound(filtred.begin(), filtred.end(), docId);
             if ((!isBoolean && tfD) || (it2 != filtred.end() && *it2 == docId)) {
-                score[docId] += (1 + log(it.second)) * (1 + log(tfD)) * numberOfArticles / df[it.first];
+                double add = (1 + log(it.second)) * (1 + log(tfD)) * idf;
+                score[docId] += add;
             }
         }
     }
@@ -121,12 +123,18 @@ int main() {
 
     FILE *stat = fopen("Index/stat", "rb");
     df = new int[wocabluarySize + 1];
-    fread(&numberOfArticles, sizeof(int), 1, stat);
+    if (fread(&numberOfArticles, sizeof(int), 1, stat) != 1) {
+        printf("NO numb of art\n");
+    }
     len = new double[numberOfArticles];
-    fread(df + 1, sizeof(int), wocabluarySize, stat);
-    fread(len, sizeof(double), numberOfArticles, stat);
+    if (fread(df + 1, sizeof(int), wocabluarySize, stat) != wocabluarySize) {
+        printf("LOL missed df\n");
+    }
+    if (fread(len, sizeof(double), numberOfArticles, stat) != numberOfArticles) {
+        printf("LOL missed len\n");
+    }
     fclose(stat);
-    
+    printf("wocSz = %d numOfA = %d\n", wocabluarySize, numberOfArticles);
     printf("READ\n");
     
     FILE *fdPyCpp, *fdCppPy;
