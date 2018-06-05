@@ -156,7 +156,8 @@ if __name__ == '__main__':
     stat.write(pack('<I', current_doc_id))
     for tok, _ in sorted(tok_to_int.items(), key = lambda x:x[1]):
         token_dict.write(tok + '\n')
-        stat.write(pack('<I', df[tok]))
+    for _, tok_df in sorted(df.items()):
+        stat.write(pack('<I', tok_df))
     token_dict.close()
     stat.close()
     mid = time.time()
