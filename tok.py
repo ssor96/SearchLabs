@@ -52,8 +52,8 @@ def parse_str(s):
             if prev != cur:
                 res.append(get_id(normalize(s[prev:cur])))
             prev = cur + 1
-    if prev < cur:
-        res.append(get_id(normalize(s[prev:cur])))
+    if prev <= cur:
+        res.append(get_id(normalize(s[prev:cur + 1])))
     return res
 
 
@@ -67,61 +67,63 @@ def get_path_to_text_file(doc_id):
 
 
 def parse_file(file_name):
-    if file_name.endswith('parsed'): return
     global current_doc_id
     file_in = open(file_name, 'r')
     output_file_name = os.path.join('Index/Parts', file_name)
     tokens = set()
     tf = defaultdict(int)
     doc = []
-    small_index = []
-    tok_pos = 0
+    # small_index = []
+    # tok_pos = 0
+    line = 0
+    doc_feature = file_name[-10:-8] + file_name[-2:] # AA/wiki_00
     for s in file_in:
         if s.startswith('<doc '):
-            path_to_article = get_path_to_text_file(current_doc_id)
-            if path_to_article.endswith('000'):
-                path = Path(os.path.join('Index/Text', path_to_article))
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path = Path(os.path.join('Index/Small_Index', path_to_article))
-                path.parent.mkdir(parents=True, exist_ok=True)
-            article_text = open(os.path.join('Index/Text', 
-                                             path_to_article), 'w')
-            article_index = open(os.path.join('Index/Small_Index', 
-                                             path_to_article), 'wb')
-            small_index = []
-            tok_pos = 0
+            # path_to_article = get_path_to_text_file(current_doc_id)
+            # if path_to_article.endswith('000'):
+            #     path = Path(os.path.join('Index/Text', path_to_article))
+            #     path.parent.mkdir(parents=True, exist_ok=True)
+            #     path = Path(os.path.join('Index/Small_Index', path_to_article))
+            #     path.parent.mkdir(parents=True, exist_ok=True)
+            # article_text = open(os.path.join('Index/Text', 
+            #                                  path_to_article), 'w')
+            # article_index = open(os.path.join('Index/Small_Index', 
+            #                                  path_to_article), 'wb')
+            # small_index = []
+            # tok_pos = 0
             tf = defaultdict(int)
             l = s.split('"') # [id=, id, url=, url, title=, title]
-            article_text.write(l[5] + '\n')
+            # article_text.write(l[5] + '\n')
             cur_toks = parse_str(l[5])
             for tok in cur_toks:
                 tf[tok] += 1
-                small_index.append((tok, tok_pos))
-                tok_pos += 1
+                # small_index.append((tok, tok_pos))
+                # tok_pos += 1
             tokens.update(cur_toks)
-            article_titles.write(l[1] + ' ' + l[5] + '\n')
+            article_titles.write(doc_feature + str(line) + '\n')
         elif s.startswith('</doc>'):
             for tok in tokens:
                 df[tok] += 1
                 doc.append((tok, current_doc_id, tf[tok]))
             tokens = set()
             current_doc_id += 1
-            article_text.close()
-            prev_tok = 0
-            for tok, pos in sorted(small_index):
-                if tok != prev_tok:
-                    prev_tok = tok
-                    article_index.write(pack('<II', tok, tf[tok]))
-                article_index.write(pack('<I', pos))
-            article_index.close()
+            # article_text.close()
+            # prev_tok = 0
+            # for tok, pos in sorted(small_index):
+            #     if tok != prev_tok:
+            #         prev_tok = tok
+            #         article_index.write(pack('<II', tok, tf[tok]))
+            #     article_index.write(pack('<I', pos))
+            # article_index.close()
         else:
-            article_text.write(s)
+            # article_text.write(s)
             cur_toks = parse_str(s)
             for tok in cur_toks:
                 tf[tok] += 1
-                small_index.append((tok, tok_pos))
-                tok_pos += 1
+                # small_index.append((tok, tok_pos))
+                # tok_pos += 1
             tokens.update(cur_toks)
+        line += 1
     file_in.close()
     file_out = open(output_file_name, 'wb')
     for tok_id, doc_id, tf in sorted(doc):

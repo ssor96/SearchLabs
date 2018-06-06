@@ -15,7 +15,6 @@ current_res = []
 current_query = ''
 
 def parse_req(s):
-    print(len(tok_to_int))
     l = []
     cur = ''
     boolean = False
@@ -133,12 +132,13 @@ def prepare_query(l):
 def get_response_from_engine():
     with open(path_cpp_py, 'r') as f:
         s = f.readline()
-    print('get "', s, '"')
+    # print('get "', s, '"')
     global current_res
     current_res = [int(x) for x in s.split()]
 
 
 def send_req_to_engine(req):
+    # return
     print('send', req)
     with open(path_py_cpp, 'w') as f:
         f.write(req + '\n')
@@ -153,6 +153,15 @@ def index():
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                           'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+
+def get_title(path_to_file, lines_to_skip):
+    with open(path_to_file, 'r') as f:
+        for _ in range(lines_to_skip):
+            next(f)
+        s = next(f)
+        l = s.split('"') # [id=, id, url=, url, title=, title]
+    return l[5], int(l[1])
 
 
 @app.route('/search')
@@ -186,7 +195,12 @@ def search():
     for i in range(50):
         if offset + i >= len(current_res):
             break
-        search_result.append(article_titles[current_res[offset + i] - 1])
+        cur_str = article_titles[current_res[offset + i]]
+        path_to_file = '../Articles/ver3/{}/wiki_{}'.format(cur_str[:2], 
+                                                            cur_str[2:4])
+        lines_to_skip = int(cur_str[4:])
+        title, art_id = get_title(path_to_file, lines_to_skip)
+        search_result.append((title, art_id))
     return render_template("serp.html", query=query, 
                                          search_result=search_result,
                                          total=len(current_res),
@@ -199,8 +213,9 @@ if __name__ == "__main__":
         os.mkfifo(path_py_cpp)
     with open('../Index/article_titles.txt', 'r') as f:
         for line in f:
-            wid, title = line.split(' ', 1) 
-            article_titles.append((title, int(wid)))
+            # wid, title = line.split(' ', 1) 
+            # article_titles.append((title, int(wid)))
+            article_titles.append(line.strip())
     with open('../Index/token_dict.txt', 'r') as f:
         cur = 1
         for token in f:
