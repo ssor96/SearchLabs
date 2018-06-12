@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import time
+import subprocess as sub
 from struct import pack
 from pathlib import Path
 from collections import defaultdict
@@ -14,7 +15,6 @@ from collections import defaultdict
 # d = defaultdict(int)
 tok_to_int = dict()
 current_doc_id = 0
-df = defaultdict(int)
 #article_titles = open('Index/article_titles.txt', 'w')
 
 def memorize_and_count(f):
@@ -26,6 +26,23 @@ def memorize_and_count(f):
         return w[s]
     return wrapper
 
+
+#@memorize_and_count
+def lemmatize(s):
+    p = sub.Popen(['../mystem', '-cl'], 
+                  stdin=sub.PIPE, 
+                  stdout=sub.PIPE)
+
+    p.stdin.write(bytes(s, encoding='utf8'))
+    p.stdin.close()
+
+    res = p.stdout.read().decode('utf8')
+
+    if res.startswith('{'):
+        en = re.search("[?|}]", res, 1).start(0)
+        res = res[1:en]
+
+    return res
 
 # @memorize_and_count
 def normalize(token):
@@ -72,11 +89,12 @@ def parse_file(file_name):
     output_file_name = os.path.join('Index/Parts', file_name)
     tokens = set()
     tf = defaultdict(int)
-    doc = []
+    # doc = []
     # small_index = []
     # tok_pos = 0
     line = 0
     doc_feature = file_name[-10:-8] + file_name[-2:] # AA/wiki_00
+    file_out = open(output_file_name, 'wb')
     for s in file_in:
         if s.startswith('<doc '):
             # path_to_article = get_path_to_text_file(current_doc_id)
@@ -103,8 +121,8 @@ def parse_file(file_name):
             article_titles.write(doc_feature + str(line) + '\n')
         elif s.startswith('</doc>'):
             for tok in tokens:
-                df[tok] += 1
-                doc.append((tok, current_doc_id, tf[tok]))
+                file_out.write(pack('<III', tok, current_doc_id, tf[tok]))
+                # doc.append((tok, current_doc_id, tf[tok]))
             tokens = set()
             current_doc_id += 1
             # article_text.close()
@@ -125,9 +143,6 @@ def parse_file(file_name):
             tokens.update(cur_toks)
         line += 1
     file_in.close()
-    file_out = open(output_file_name, 'wb')
-    for tok_id, doc_id, tf in sorted(doc):
-        file_out.write(pack('<III', tok_id, doc_id, tf))
     file_out.close()
 
 
@@ -154,13 +169,11 @@ if __name__ == '__main__':
     start = time.time()
     cpu_start = time.clock()
     token_dict = open('Index/token_dict.txt', 'w')
-    stat = open('Index/pre_stat', 'wb')
-    stat.write(pack('<I', current_doc_id))
     for tok, _ in sorted(tok_to_int.items(), key = lambda x:x[1]):
         token_dict.write(tok + '\n')
-    for _, tok_df in sorted(df.items()):
-        stat.write(pack('<I', tok_df))
     token_dict.close()
+    stat = open('Index/pre_stat', 'wb')
+    stat.write(pack('<I', current_doc_id))
     stat.close()
     mid = time.time()
     cpu_mid = time.clock()

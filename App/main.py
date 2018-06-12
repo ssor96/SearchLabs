@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append('../')
 import time
-from tok import is_valid_symbol, normalize
+from tok import is_valid_symbol, normalize, lemmatize
 from flask import Flask, request, render_template, send_from_directory
 
 path_cpp_py = '/tmp/pipeCppPy'
@@ -13,6 +13,7 @@ article_titles = []
 tok_to_int = {}
 current_res = []
 current_query = ''
+use_engine = True
 
 def parse_req(s):
     l = []
@@ -23,7 +24,7 @@ def parse_req(s):
             cur += c
         else:
             if cur:
-                cur = normalize(cur)
+                cur = lemmatize(normalize(cur))
                 cur = tok_to_int.get(cur, 0)
                 l.append('.' + str(cur))
             cur = ''
@@ -34,11 +35,11 @@ def parse_req(s):
             elif c in '!()':
                 boolean = True
                 l.append(c)
-            elif c == ' ':
+            else:
                 if l and l[-1] != ' ':
                     l.append(' ')
     if cur:
-        cur = normalize(cur)
+        cur = lemmatize(normalize(cur))
         cur = tok_to_int.get(cur, 0)
         l.append('.' + str(cur))
     l2 = []
@@ -81,17 +82,19 @@ def prepare_query(l):
     # now only | & and !
     # del !
     l2 = []
-    i = 0
-    while i < len(l1):
+    i = len(l1) - 1
+    while i >= 0:
         if l1[i] == '!':
-            if i + 1 < len(l1) and len(l1[i + 1]) > 1:
-                l2.append('!' + l1[i + 1])
-                i += 2
+            if l2 and len(l2[-1]) > 1:
+                new = '!' + l2[-1]
+                del l2[-1]
+                l2.append(new)
             else:
                 return ''
         else:
             l2.append(l1[i])
-            i += 1
+        i -= 1
+    l2 = l2[::-1]
     # now only & and |
     #del &
     l3 = []
@@ -130,18 +133,21 @@ def prepare_query(l):
 
 
 def get_response_from_engine():
-    with open(path_cpp_py, 'r') as f:
-        s = f.readline()
-    # print('get "', s, '"')
     global current_res
-    current_res = [int(x) for x in s.split()]
+    if use_engine:
+        with open(path_cpp_py, 'r') as f:
+            s = f.readline()
+        current_res = [int(x) for x in s.split()]
+    else:
+        current_res = list(range(100))
+    # print('get "', s, '"')
 
 
 def send_req_to_engine(req):
-    # return
-    print('send', req)
-    with open(path_py_cpp, 'w') as f:
-        f.write(req + '\n')
+    if use_engine:
+        print('send', req)
+        with open(path_py_cpp, 'w') as f:
+            f.write(req + '\n')
 
 
 @app.route('/')
@@ -161,7 +167,15 @@ def get_title(path_to_file, lines_to_skip):
             next(f)
         s = next(f)
         l = s.split('"') # [id=, id, url=, url, title=, title]
-    return l[5], int(l[1])
+        next(f)
+        next(f)
+        s = next(f)
+        snippet = s
+        while not s.startswith('</doc>'):
+            s = next(f)
+            print(s)
+        print('snip =', snippet)
+    return (l[5], snippet, int(l[1]))
 
 
 @app.route('/search')
@@ -182,8 +196,9 @@ def search():
     q_toks, boolean = parse_req(query)
     if len(q_toks) == 0:
         return 'Empty request'
-
+    print('toks =', q_toks)
     prepared = str(int(boolean)) + prepare_query(q_toks)
+    print('prep =', prepared)
     if len(prepared) == 1:
         return 'Wrong request format'
     print('User req', prepared)
@@ -199,8 +214,8 @@ def search():
         path_to_file = '../Articles/ver3/{}/wiki_{}'.format(cur_str[:2], 
                                                             cur_str[2:4])
         lines_to_skip = int(cur_str[4:])
-        title, art_id = get_title(path_to_file, lines_to_skip)
-        search_result.append((title, art_id))
+        title, snippet, art_id = get_title(path_to_file, lines_to_skip)
+        search_result.append((title, snippet, art_id))
     return render_template("serp.html", query=query, 
                                          search_result=search_result,
                                          total=len(current_res),

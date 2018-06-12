@@ -21,7 +21,7 @@ using std::pair;
 
 int wocabluarySize;
 int numberOfArticles;
-int *df, *sizes, **w, **tf;
+int *sizes, **w, **tf;
 double *len;
 
 void buildTree(ListIterator *&cur, char *query, int &pos, map<int, int> &tfQ) {
@@ -63,15 +63,18 @@ void buildTree(ListIterator *&cur, char *query, int &pos, map<int, int> &tfQ) {
     cur->next();
 }
 
-void rankDocs(vector<int> &filtred, map<int, int> &tfQ, vector<pair<double, int>> &res, bool isBoolean) {
+void rankDocs(vector<int> &filtred, map<int, int> &tfQ, 
+              vector<pair<pair<double, double>, int>> &res, bool isBoolean) {
     map<int, double> score;
+    map<int, double> score2;
     if (isBoolean) {
         for (int docId: filtred) {
             score[docId] = 0;
         }
     }
     for (auto &it: tfQ) {
-        double idf = 1.0 * numberOfArticles / df[it.first];
+        if (it.first == 0) continue;
+        double idf = 1.0 * numberOfArticles / sizes[it.first];
         for (int i = 0; i < sizes[it.first]; ++i) {
             int docId = w[it.first][i];
             int tfD = tf[it.first][i];
@@ -79,14 +82,15 @@ void rankDocs(vector<int> &filtred, map<int, int> &tfQ, vector<pair<double, int>
             if ((!isBoolean && tfD) || (it2 != filtred.end() && *it2 == docId)) {
                 double add = (1 + log(it.second)) * (1 + log(tfD)) * idf;
                 score[docId] += add;
+                score2[docId] += idf;
             }
         }
     }
     res.reserve(score.size());
     for (auto &it: score) {
-        res.push_back({it.second / len[it.first], it.first});
+        res.push_back({{score2[it.first], it.second / len[it.first]}, it.first});
     }
-    std::sort(res.begin(), res.end(), std::greater<pair<double, int>>());
+    std::sort(res.begin(), res.end(), std::greater<pair<pair<double, double>, int>>());
 }
 
 int main() {
@@ -122,14 +126,10 @@ int main() {
     fclose(in);
 
     FILE *stat = fopen("Index/stat", "rb");
-    df = new int[wocabluarySize + 1];
     if (fread(&numberOfArticles, sizeof(int), 1, stat) != 1) {
         printf("NO numb of art\n");
     }
     len = new double[numberOfArticles];
-    if (fread(df + 1, sizeof(int), wocabluarySize, stat) != wocabluarySize) {
-        printf("LOL missed df\n");
-    }
     if (fread(len, sizeof(double), numberOfArticles, stat) != numberOfArticles) {
         printf("LOL missed len\n");
     }
@@ -162,7 +162,7 @@ int main() {
                 queryIterator->next();
             }
         }
-        vector<pair<double, int>> res;
+        vector<pair<pair<double, double>, int>> res;
         rankDocs(filtred, tfQ, res, isBoolean);
         delete queryIterator;
         fdCppPy = fopen(fifoCppPy, "w");
@@ -180,6 +180,5 @@ int main() {
     delete [] sizes;
     delete [] w;
     delete [] tf;
-    delete [] df;
     delete [] len;
 }

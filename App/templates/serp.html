@@ -30,8 +30,9 @@
       </p>
     </form>
     <h3>Результаты по запросу {{query}} ({{total}} документов, {{tim}} cек.)</h3>
-    {% for head, id in search_result %}
+    {% for head, snippet, id in search_result %}
       <h3> <a target="_blank" href="https://ru.wikipedia.org/wiki?curid={{id}}">{{head}}</a> </h3>
+      {{snippet}}
     {% endfor %}
     <p>
       <input type="button" value="<= Туда" onClick="redirectToQueryUrl({{offset - 50}})">
