@@ -4,9 +4,12 @@
 #include <algorithm>
 
 struct info {
-    int tokId, docId, tf;
+    int tokId, docId, tok_pos;
     bool operator <(const info &other) const{
         if (tokId == other.tokId) {
+            if (docId == other.docId) {
+                return tok_pos < other.tok_pos;
+            }
             return docId < other.docId;
         }
         return tokId < other.tokId;
@@ -33,31 +36,20 @@ int main(int argc, char **argv) {
             if (!fread(&docId, sizeof(int), 1, f)) {
                 break;
             }
-            if (!fread(&tf, sizeof(int), 1, f)) {
+            if (!fread(&tok_pos, sizeof(int), 1, f)) {
                 break;
             }
-            ar.push_back({newId[tokId], docId, tf});
+            ar.push_back({newId[tokId], docId, tok_pos});
         }
         fclose(f);
         std::sort(ar.begin(), ar.end());
         argv[i][strlen(argv[i]) - 1 - 6] = 'n';
         f = fopen(argv[i], "wb");
-        info p = ar[0];
-        p.tf = 0;
         for (info &inf: ar) {
-            if (inf.tokId == p.tokId && inf.docId == p.docId) {
-                p.tf += inf.tf;
-            }
-            else {
-                fwrite(&p.tokId, sizeof(int), 1, f);
-                fwrite(&p.docId, sizeof(int), 1, f);
-                fwrite(&p.tf, sizeof(int), 1, f);
-                p = inf;
-            }
+            fwrite(&inf.tokId, sizeof(int), 1, f);
+            fwrite(&inf.docId, sizeof(int), 1, f);
+            fwrite(&inf.tok_pos, sizeof(int), 1, f);
         }
-        fwrite(&p.tokId, sizeof(int), 1, f);
-        fwrite(&p.docId, sizeof(int), 1, f);
-        fwrite(&p.tf, sizeof(int), 1, f);
         fclose(f);
     }
 }

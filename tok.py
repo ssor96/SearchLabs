@@ -6,16 +6,10 @@ import subprocess as sub
 from struct import pack
 from pathlib import Path
 from collections import defaultdict
-# from nltk.stem.snowball import SnowballStemmer
-# from nltk.tokenize.moses import MosesTokenizer
-
-# stem = SnowballStemmer('russian')
-# tokenizer = MosesTokenizer('ru')
 
 # d = defaultdict(int)
 tok_to_int = dict()
 current_doc_id = 0
-#article_titles = open('Index/article_titles.txt', 'w')
 
 def memorize_and_count(f):
     w = dict()
@@ -74,75 +68,31 @@ def parse_str(s):
     return res
 
 
-def get_path_to_text_file(doc_id):
-    str_doc_id = str(doc_id)
-    str_doc_id = '0' * (7 - len(str_doc_id)) + str_doc_id
-    path_to_text_file = os.path.join(str_doc_id[:2],
-                                     str_doc_id[2:4],
-                                     str_doc_id[4:])
-    return path_to_text_file
-
-
 def parse_file(file_name):
     global current_doc_id
     file_in = open(file_name, 'r')
     output_file_name = os.path.join('Index/Parts', file_name)
-    tokens = set()
-    tf = defaultdict(int)
-    # doc = []
-    # small_index = []
-    # tok_pos = 0
+    tok_pos = 0
     line = 0
+    doc = []
     doc_feature = file_name[-10:-8] + file_name[-2:] # AA/wiki_00
-    file_out = open(output_file_name, 'wb')
     for s in file_in:
         if s.startswith('<doc '):
-            # path_to_article = get_path_to_text_file(current_doc_id)
-            # if path_to_article.endswith('000'):
-            #     path = Path(os.path.join('Index/Text', path_to_article))
-            #     path.parent.mkdir(parents=True, exist_ok=True)
-            #     path = Path(os.path.join('Index/Small_Index', path_to_article))
-            #     path.parent.mkdir(parents=True, exist_ok=True)
-            # article_text = open(os.path.join('Index/Text', 
-            #                                  path_to_article), 'w')
-            # article_index = open(os.path.join('Index/Small_Index', 
-            #                                  path_to_article), 'wb')
-            # small_index = []
-            # tok_pos = 0
-            tf = defaultdict(int)
+            tok_pos = 0
             l = s.split('"') # [id=, id, url=, url, title=, title]
-            # article_text.write(l[5] + '\n')
-            cur_toks = parse_str(l[5])
-            for tok in cur_toks:
-                tf[tok] += 1
-                # small_index.append((tok, tok_pos))
-                # tok_pos += 1
-            tokens.update(cur_toks)
             article_titles.write(doc_feature + str(line) + '\n')
         elif s.startswith('</doc>'):
-            for tok in tokens:
-                file_out.write(pack('<III', tok, current_doc_id, tf[tok]))
-                # doc.append((tok, current_doc_id, tf[tok]))
-            tokens = set()
             current_doc_id += 1
-            # article_text.close()
-            # prev_tok = 0
-            # for tok, pos in sorted(small_index):
-            #     if tok != prev_tok:
-            #         prev_tok = tok
-            #         article_index.write(pack('<II', tok, tf[tok]))
-            #     article_index.write(pack('<I', pos))
-            # article_index.close()
         else:
-            # article_text.write(s)
             cur_toks = parse_str(s)
             for tok in cur_toks:
-                tf[tok] += 1
-                # small_index.append((tok, tok_pos))
-                # tok_pos += 1
-            tokens.update(cur_toks)
+                doc.append((tok, current_doc_id, tok_pos))
+                tok_pos += 1
         line += 1
     file_in.close()
+    file_out = open(output_file_name, 'wb')
+    for tok_id, doc_id, tok_pos in sorted(doc):
+        file_out.write(pack('<III', tok_id, doc_id, tok_pos))
     file_out.close()
 
 
@@ -178,10 +128,3 @@ if __name__ == '__main__':
     mid = time.time()
     cpu_mid = time.clock()
     print(mid - start, cpu_mid - cpu_start)
-    # s = 0
-    # cnt = 0
-    # for t in d.items():
-    #     cnt += t[1]
-    #     s += len(t[0]) * t[1]
-    # print(time.time() - mid, time.clock() - cpu_mid)
-    # print(time.time() - start, time.clock() - cpu_start)

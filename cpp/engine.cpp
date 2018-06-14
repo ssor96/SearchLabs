@@ -19,43 +19,56 @@ using std::map;
 using std::vector;
 using std::pair;
 
-int wocabluarySize;
+int numberOfTokens;
 int numberOfArticles;
-int *sizes, **w, **tf;
+int *df, **docIds, **tf;
 double *len;
 
-void buildTree(ListIterator *&cur, char *query, int &pos, map<int, int> &tfQ) {
+void buildTree(ListIterator *&cur, char *query, int &pos, 
+               map<int, int> &tfQ, 
+               vector<int> &orderedToks) {
     if (query[pos] == '&') {
         cur = (ListIterator*)new ListIteratorAnd;
         pos++;
-        buildTree(cur->l, query, pos, tfQ);
-        buildTree(cur->r, query, pos, tfQ);
+        buildTree(cur->l, query, pos, tfQ, orderedToks);
+        buildTree(cur->r, query, pos, tfQ, orderedToks);
     }
     else if (query[pos] == '|') {
         cur = (ListIterator*)new ListIteratorOr;
         pos++;
-        buildTree(cur->l, query, pos, tfQ);
-        buildTree(cur->r, query, pos, tfQ);
+        buildTree(cur->l, query, pos, tfQ, orderedToks);
+        buildTree(cur->r, query, pos, tfQ, orderedToks);
     }
     else if (query[pos] == '!') {
         cur = (ListIterator*)new ListIteratorNot;
         pos++;
-        buildTree(cur->l, query, pos, tfQ);
+        buildTree(cur->l, query, pos, tfQ, orderedToks);
     }
     else if (query[pos] == '"') {
-        cur = (ListIterator*)new ListIteratorQuote;
-        pos++;
-        buildTree(cur->l, query, pos, tfQ);
-    }
-    else if (query[pos] == '.'){
+        ListIteratorQuote *tmp = new ListIteratorQuote;
+        cur = (ListIterator*)tmp;
         pos++;
         int num = 0;
         while (query[pos] >= '0' && query[pos] <= '9') {
             num = num * 10 + query[pos] - '0';
             pos++;
         }
+        int ppos = orderedToks.size();
+        buildTree(cur->l, query, pos, tfQ, orderedToks);
+        tmp->toks.assign(orderedToks.begin() + ppos, orderedToks.end());
+        tmp->sz = num;
+        tmp->setEnv();
+    }
+    else if (query[pos] == '.') {
+        pos++;
+        int num = 0;
+        while (query[pos] >= '0' && query[pos] <= '9') {
+            num = num * 10 + query[pos] - '0';
+            pos++;
+        }
+        orderedToks.push_back(num);
         tfQ[num]++;
-        cur = (ListIterator*)new ListIteratorRead(w[num], sizes[num]);
+        cur = (ListIterator*)new ListIteratorRead(docIds[num], df[num]);
     }
     else {
         printf("OMG FAILED\n");
@@ -74,9 +87,9 @@ void rankDocs(vector<int> &filtred, map<int, int> &tfQ,
     }
     for (auto &it: tfQ) {
         if (it.first == 0) continue;
-        double idf = 1.0 * numberOfArticles / sizes[it.first];
-        for (int i = 0; i < sizes[it.first]; ++i) {
-            int docId = w[it.first][i];
+        double idf = 1.0 * numberOfArticles / df[it.first];
+        for (int i = 0; i < df[it.first]; ++i) {
+            int docId = docIds[it.first][i];
             int tfD = tf[it.first][i];
             auto it2 = lower_bound(filtred.begin(), filtred.end(), docId);
             if ((!isBoolean && tfD) || (it2 != filtred.end() && *it2 == docId)) {
@@ -94,47 +107,57 @@ void rankDocs(vector<int> &filtred, map<int, int> &tfQ,
 }
 
 int main() {
-    FILE *sizesIn = fopen("Index/sizes", "rb");
-    if (fread(&wocabluarySize, sizeof(int), 1, sizesIn) != 1) {
-        printf("Critical error: error while reading wocabluary size\n");
-        return 1;
-    }
-    sizes = new int[wocabluarySize + 1];
-    sizes[0] = 0;
-    if (fread(sizes + 1, sizeof(int), wocabluarySize, sizesIn) != wocabluarySize) {
-        printf("Critical error: expected %d ints but it's too much\n", wocabluarySize);
-        return 1;
-    }
-    fclose(sizesIn);
-    
-
-    FILE *in = fopen("Index/merged", "rb");
-    w = new int*[wocabluarySize + 1];
-    tf = new int*[wocabluarySize + 1];
-    for (int i = 1; i <= wocabluarySize; ++i) {
-        w[i] = new int[sizes[i]];
-        if (fread(w[i], sizeof(int), sizes[i], in) != sizes[i]) {
-            printf("Critical error: term #%d expected %d ints but it's too much\n", i, sizes[i]);
-            return 1;
-        }
-        tf[i] = new int[sizes[i]];
-        if (fread(tf[i], sizeof(int), sizes[i], in) != sizes[i]) {
-            printf("Critical error: tf term #%d expected %d ints but it's too much\n", i, sizes[i]);
-            return 1;
-        }
-    }
-    fclose(in);
-
     FILE *stat = fopen("Index/stat", "rb");
     if (fread(&numberOfArticles, sizeof(int), 1, stat) != 1) {
-        printf("NO numb of art\n");
+        printf("Critical error: error while reading numberOfArticles\n");
+        return 1;
+    }
+    if (fread(&numberOfTokens, sizeof(int), 1, stat) != 1) {
+        printf("Critical error: error while reading numberOfTokens\n");
+        return 1;
     }
     len = new double[numberOfArticles];
     if (fread(len, sizeof(double), numberOfArticles, stat) != numberOfArticles) {
-        printf("LOL missed len\n");
+        printf("Critical error: error while reading Articles len\n");
+        return 1;
     }
     fclose(stat);
-    printf("wocSz = %d numOfA = %d\n", wocabluarySize, numberOfArticles);
+
+
+    FILE *dfIn = fopen("Index/df", "rb");
+    df = new int[numberOfTokens + 1];
+    if (fread(df + 1, sizeof(int), numberOfTokens, dfIn) != numberOfTokens) {
+        printf("Critical error: error while reading df\n");
+        return 1;
+    }
+    fclose(dfIn);
+
+
+    FILE *tfIn = fopen("Index/tf", "rb");
+    tf = new int*[numberOfTokens + 1];
+    for (int i = 1; i <= numberOfTokens; ++i) {
+        tf[i] = new int[df[i]];
+        if (fread(tf[i], sizeof(int), df[i], tfIn) != df[i]) {
+            printf("Critical error: error while reading %d tf list\n", i);
+            return 1;
+        }
+    }
+    fclose(tfIn);
+
+
+    FILE *mainIndexIn = fopen("Index/mainIndex", "rb");
+    docIds = new int*[numberOfTokens + 1];
+    for (int i = 1; i <= numberOfTokens; ++i) {
+        docIds[i] = new int[df[i]];
+        if (fread(docIds[i], sizeof(int), df[i], mainIndexIn) != df[i]) {
+            printf("Critical error: error while reading %d docIds list\n", i);
+            return 1;
+        }
+    }
+    fclose(mainIndexIn);
+    
+
+    printf("numOfT = %d numOfA = %d\n", numberOfTokens, numberOfArticles);
     printf("READ\n");
     
     FILE *fdPyCpp, *fdCppPy;
@@ -154,7 +177,8 @@ int main() {
         bool isBoolean = buf[0] - '0';
         int pos = 1;
         map<int, int> tfQ;
-        buildTree(queryIterator, buf, pos, tfQ);
+        vector<int> dummy;
+        buildTree(queryIterator, buf, pos, tfQ, dummy);
         vector<int> filtred;
         if (isBoolean) {
             while (queryIterator->ok) {
@@ -173,12 +197,12 @@ int main() {
         fclose(fdCppPy);
     }
     // unlink(fifoCppPy);
-    for (int i = 1; i <= wocabluarySize; ++i) {
-        delete [] w[i];
+    for (int i = 1; i <= numberOfTokens; ++i) {
+        delete [] docIds[i];
         delete [] tf[i];
     }
-    delete [] sizes;
-    delete [] w;
+    delete [] docIds;
     delete [] tf;
+    delete [] df;
     delete [] len;
 }

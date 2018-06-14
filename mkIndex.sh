@@ -15,7 +15,7 @@ time (
     echo "Renumber..." &&
     g++ -std=c++11 -O2 cpp/renumberToks.cpp -o renumber.out &&
     # create Index/Parts/.../niki...
-    time ./renumber.out Index/Parts/Articles/ver3/*/* &&
+    time ./renumber.out Index/Parts/Articles/ver3/*/w* &&
     rm renumber.out Index/lemm_table &&
     g++ -std=c++11 -O2 cpp/merge.cpp -o merge.out &&
     echo "Merge files..." &&
