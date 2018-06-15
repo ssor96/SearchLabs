@@ -16,32 +16,68 @@ current_query = ''
 use_engine = True
 
 def parse_req(s):
+    norm = lambda x:str(tok_to_int.get(normalize(x), 0))
     l = []
     cur = ''
     boolean = False
-    for c in s:
-        if is_valid_symbol(c):
-            cur += c
+    i = 0
+    while i < len(s):
+        if is_valid_symbol(s[i]):
+            cur += s[i]
         else:
             if cur:
-                cur = lemmatize(normalize(cur))
-                cur = tok_to_int.get(cur, 0)
-                l.append('.' + str(cur))
+                cur = norm(cur)
+                l.append('.' + cur)
             cur = ''
-            if c in '&|':
+            if s[i] in '&|':
                 boolean = True
-                if l and l[-1] != c:
-                    l.append(c)
-            elif c in '!()':
+                if l and l[-1] != s[i]:
+                    l.append(s[i])
+            elif s[i] in '!()':
                 boolean = True
-                l.append(c)
+                l.append(s[i])
+            elif s[i] == '"':
+                boolean = True
+                tmp = ''
+                cur = ''
+                cnt = 0
+                i += 1
+                while i < len(s) and s[i] != '"':
+                    if is_valid_symbol(s[i]):
+                        cur += s[i]
+                    elif cur:
+                        tmp += '.' + norm(cur)
+                        cur = ''
+                        cnt += 1
+                    i += 1
+                if cur:
+                    tmp += '.' + norm(cur)
+                    cnt += 1
+                cur = ''
+                if i == len(s) or cnt == 0:
+                    return ['&'], True
+                i += 1
+                tmp = '&' * (cnt - 1) + tmp
+                sz = cnt
+                if i < len(s) and s[i] == '/':
+                    i += 1
+                    num = 0
+                    while i < len(s) and s[i].isdigit():
+                        num = num * 10 + ord(s[i]) - ord('0')
+                        i += 1
+                    if num < cnt:
+                        return ['&'], True
+                    sz = num
+                tmp = '"' + str(sz) + tmp
+                l.append(tmp)
+                i -= 1
             else:
                 if l and l[-1] != ' ':
                     l.append(' ')
+        i += 1
     if cur:
-        cur = lemmatize(normalize(cur))
-        cur = tok_to_int.get(cur, 0)
-        l.append('.' + str(cur))
+        cur = norm(cur)
+        l.append('.' + cur)
     l2 = []
     i = 0
     was = False
@@ -168,12 +204,12 @@ def get_title(path_to_file, lines_to_skip):
         s = next(f)
         l = s.split('"') # [id=, id, url=, url, title=, title]
         next(f)
-        next(f)
         s = next(f)
-        snippet = s
+        snippet = ''
         while not s.startswith('</doc>'):
+            if not snippet:
+                snippet = s.strip()
             s = next(f)
-            print(s)
         print('snip =', snippet)
     return (l[5], snippet, int(l[1]))
 

@@ -55,9 +55,7 @@ void buildTree(ListIterator *&cur, char *query, int &pos,
         }
         int ppos = orderedToks.size();
         buildTree(cur->l, query, pos, tfQ, orderedToks);
-        tmp->toks.assign(orderedToks.begin() + ppos, orderedToks.end());
-        tmp->sz = num;
-        tmp->setEnv();
+        tmp->setEnv(orderedToks.begin() + ppos, orderedToks.end(), num);
     }
     else if (query[pos] == '.') {
         pos++;
