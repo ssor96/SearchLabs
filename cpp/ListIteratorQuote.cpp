@@ -1,41 +1,34 @@
 #include "ListIteratorQuote.h"
 
-extern const int *df, **docIds, **tf;
+extern const int *df;
+extern const unsigned char **docIds, **tf, **coord;
 
 struct ListIteratorQuote::Coord {
-    int *data;
-    FILE *source;
+    DiffReader readerC;
+    DiffReader readerDocId;
+    Reader readerTf;
+    int readedTf, readedDocId, readedC;
     int id, curDoc, curPos;
-    Coord() {
-        const int BUF_SIZE = 1000000;
-        data = new int[BUF_SIZE];
-        source = fopen("Index/coord", "rb");
-        if (source == NULL) {
-            printf("Cannot open file!\n");
-        }
-    }
+    Coord() {}
     void set(int tokId) {
         id = tokId;
-        for (int j = 1; j < id; ++j) {
-            for (int k = 0; k < df[j]; ++k) {
-                if (fread(data, sizeof(int), tf[j][k], source) != tf[j][k]) {
-                    // something bad happens
-                }
-            }
-        }
-        if (fread(data, sizeof(int), tf[id][0], source) != tf[id][0]) {
-            // something bad happens
-        }
+        readerC.data = coord[id];
+        readedC = readerC.getNext();
+        readerDocId.data = docIds[id];
+        readedDocId = readerDocId.getNext();
+        readerTf.data = tf[id];
+        readedTf = readerTf.getNext();
         curDoc = 0;
         curPos = 0;
     }
     bool next() {
-        if (curPos + 1 == tf[id][curDoc]) {
+        if (curPos + 1 == readedTf) {
             if (!nextDoc()) {
                 return false;
             }
         }
         else {
+            readedC = readerC.getNext();
             curPos++;
         }
         return true;
@@ -45,22 +38,25 @@ struct ListIteratorQuote::Coord {
             return false;
         }
         else {
+            while (curPos + 1 != readedTf) {
+                readerC.getNext();
+                curPos++;
+            }        
             curDoc++;
-            fread(data, sizeof(int), tf[id][curDoc], source);
+            readedTf = readerTf.getNext();
+            readedDocId = readerDocId.getNext();
+            readerC.prev = 0;
         }
         curPos = 0;
         return true;
     }
     int getPos() {
-        return data[curPos];
+        return readedC;
     }
     int getDocId() {
-        return docIds[id][curDoc];
+        return readedDocId;
     }
-    ~Coord() {
-        fclose(source);
-        delete [] data;
-    }
+    ~Coord() {}
 };
 
 void ListIteratorQuote::setEnv(std::vector<int>::iterator beg, 

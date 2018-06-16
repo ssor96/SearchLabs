@@ -1,6 +1,6 @@
 #include <cstdio>
 #include <cstring>
-#include <vector>
+#include <sys/stat.h>
 #include <algorithm>
 
 struct info {
@@ -17,39 +17,30 @@ struct info {
 };
 
 int main(int argc, char **argv) {
-    std::vector<int> newId;
-    newId.push_back(0);
+    struct stat st;
+    stat("Index/lemm_table", &st);
+    int sz = st.st_size / sizeof(int);
+    int *newId = new int[sz + 1];
+    newId[0] = 0;
     FILE *f = fopen("Index/lemm_table", "rb");
-    int id;
-    while (fread(&id, sizeof(int), 1, f)) {
-        newId.push_back(id);
-    }
+    fread(newId + 1, sizeof(int), sz, f);
     fclose(f);
     for (int i = 1; i < argc; ++i) {
+        stat(argv[i], &st);
+        int sz = st.st_size / sizeof(info);
         FILE *f = fopen(argv[i], "rb");
-        std::vector<info> ar;
-        for (;;) {
-            int tokId, docId, tf;
-            if (!fread(&tokId, sizeof(int), 1, f)) {
-                break;
-            }
-            if (!fread(&docId, sizeof(int), 1, f)) {
-                break;
-            }
-            if (!fread(&tok_pos, sizeof(int), 1, f)) {
-                break;
-            }
-            ar.push_back({newId[tokId], docId, tok_pos});
-        }
+        info *ar = new info[sz];
+        fread(ar, sizeof(info), sz, f);
         fclose(f);
-        std::sort(ar.begin(), ar.end());
+        for (int j = 0; j < sz; ++j) {
+            ar[j].tokId = newId[ar[j].tokId];
+        }
+        std::sort(ar, ar + sz);
         argv[i][strlen(argv[i]) - 1 - 6] = 'n';
         f = fopen(argv[i], "wb");
-        for (info &inf: ar) {
-            fwrite(&inf.tokId, sizeof(int), 1, f);
-            fwrite(&inf.docId, sizeof(int), 1, f);
-            fwrite(&inf.tok_pos, sizeof(int), 1, f);
-        }
+        fwrite(ar, sizeof(info), sz, f);
         fclose(f);
+        delete [] ar;
     }
+    delete [] newId;
 }

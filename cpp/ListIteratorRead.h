@@ -1,4 +1,5 @@
 #include "ListIterator.h"
+#include "Reader.h"
 
 class ListIteratorRead : ListIterator {
 private:
@@ -6,9 +7,11 @@ private:
 public:
     int sz;
     int pos;
-    T *elements;
-    ListIteratorRead(T *elements, int sz): elements(elements), sz(sz) {
+    unsigned char *elements;
+    DiffReader reader;
+    ListIteratorRead(unsigned char *elements, int sz): elements(elements), sz(sz) {
         pos = 0;
+        reader.data = elements;
     }
     void next();
     ~ListIteratorRead(){}

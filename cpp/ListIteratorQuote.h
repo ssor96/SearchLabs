@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <vector>
 #include "ListIterator.h"
+#include "Reader.h"
 
 class ListIteratorQuote : ListIterator {
 private:

@@ -5,6 +5,7 @@ void ListIteratorRead::next() {
         ok = false;
     }
     else {
-        cur = elements[pos++];
+        cur = reader.getNext();
+        pos++;
     }
 }

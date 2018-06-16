@@ -3,16 +3,16 @@
 extern const int numberOfArticles;
 
 ListIteratorNot::ListIteratorNot() {
-    cur = -1;
+    cur = 0;
 }
 
 void ListIteratorNot::next() {
     cur++;
-    while (cur < numberOfArticles && l->ok && l->cur == cur) {
+    while (cur <= numberOfArticles && l->ok && l->cur == cur) {
         cur++;
         l->next();
     }
-    if (cur >= numberOfArticles) ok = false;
+    if (cur > numberOfArticles) ok = false;
 }
 
 ListIteratorNot::~ListIteratorNot() {

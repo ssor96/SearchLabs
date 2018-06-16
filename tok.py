@@ -1,27 +1,15 @@
 import os
 import re
 import sys
-import time
 import subprocess as sub
 from struct import pack
-from pathlib import Path
-from collections import defaultdict
+# from pathlib import Path
+import unicodedata
 
-# d = defaultdict(int)
 tok_to_int = dict()
-current_doc_id = 0
-
-def memorize_and_count(f):
-    w = dict()
-    def wrapper(s):
-        if s not in w:
-            w[s] = f(s)
-        # d[w[s]] += 1
-        return w[s]
-    return wrapper
+current_doc_id = 1
 
 
-#@memorize_and_count
 def lemmatize(s):
     p = sub.Popen(['../mystem', '-cl'], 
                   stdin=sub.PIPE, 
@@ -38,14 +26,24 @@ def lemmatize(s):
 
     return res
 
-# @memorize_and_count
+
+def strip_accents(s):
+    return ''.join(c for c in unicodedata.normalize('NFD', s)
+                    if unicodedata.category(c) != 'Mn')
+
+
 def normalize(token):
-    return token.lower()
+    return strip_accents(token.lower())
+
+
+lst_tok_id = 1
 
 
 def get_id(s):
+    global lst_tok_id
     if s not in tok_to_int:
-        tok_to_int[s] = len(tok_to_int) + 1
+        tok_to_int[s] = lst_tok_id
+        lst_tok_id += 1
     return tok_to_int[s]
 
 
@@ -72,13 +70,13 @@ def parse_file(file_name):
     global current_doc_id
     file_in = open(file_name, 'r')
     output_file_name = os.path.join('Index/Parts', file_name)
-    tok_pos = 0
+    tok_pos = 1
     line = 0
-    doc = []
     doc_feature = file_name[-10:-8] + file_name[-2:] # AA/wiki_00
+    file_out = open(output_file_name, 'wb')
     for s in file_in:
         if s.startswith('<doc '):
-            tok_pos = 0
+            tok_pos = 1
             l = s.split('"') # [id=, id, url=, url, title=, title]
             article_titles.write(doc_feature + str(line) + '\n')
         elif s.startswith('</doc>'):
@@ -86,26 +84,22 @@ def parse_file(file_name):
         else:
             cur_toks = parse_str(s)
             for tok in cur_toks:
-                doc.append((tok, current_doc_id, tok_pos))
+                file_out.write(pack('<III', tok, current_doc_id, tok_pos))
                 tok_pos += 1
         line += 1
     file_in.close()
-    file_out = open(output_file_name, 'wb')
-    for tok_id, doc_id, tok_pos in sorted(doc):
-        file_out.write(pack('<III', tok_id, doc_id, tok_pos))
     file_out.close()
 
 
 def parse_dir(dir_name):
-    path = Path(os.path.join('Index/Parts', dir_name))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    for name in sorted(os.listdir(dir_name)):
+    # path = Path(os.path.join('Index/Parts', dir_name))
+    # path.parent.mkdir(parents=True, exist_ok=True)
+    for name in os.listdir(dir_name):
         child_name = os.path.join(dir_name, name)
         if os.path.isdir(child_name):
             parse_dir(child_name)
         else:
             parse_file(child_name)
-            print(child_name)
 
 
 if __name__ == '__main__':
@@ -116,15 +110,10 @@ if __name__ == '__main__':
     article_titles = open('Index/article_titles.txt', 'w')
     parse_dir(sys.argv[1])
     article_titles.close()
-    start = time.time()
-    cpu_start = time.clock()
     token_dict = open('Index/token_dict.txt', 'w')
     for tok, _ in sorted(tok_to_int.items(), key = lambda x:x[1]):
         token_dict.write(tok + '\n')
     token_dict.close()
     stat = open('Index/pre_stat', 'wb')
-    stat.write(pack('<I', current_doc_id))
+    stat.write(pack('<I', current_doc_id - 1))
     stat.close()
-    mid = time.time()
-    cpu_mid = time.clock()
-    print(mid - start, cpu_mid - cpu_start)

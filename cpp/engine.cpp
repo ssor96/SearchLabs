@@ -14,6 +14,7 @@
 #include "ListIteratorOr.h"
 #include "ListIteratorAnd.h"
 #include "ListIteratorQuote.h"
+#include "Reader.h"
 
 using std::map;
 using std::vector;
@@ -21,7 +22,8 @@ using std::pair;
 
 int numberOfTokens;
 int numberOfArticles;
-int *df, **docIds, **tf;
+int *df;
+unsigned char **docIds, **tf, **coord;
 double *len;
 
 void buildTree(ListIterator *&cur, char *query, int &pos, 
@@ -86,9 +88,13 @@ void rankDocs(vector<int> &filtred, map<int, int> &tfQ,
     for (auto &it: tfQ) {
         if (it.first == 0) continue;
         double idf = 1.0 * numberOfArticles / df[it.first];
+        DiffReader readerDocId;
+        readerDocId.data = docIds[it.first];
+        Reader readerTf;
+        readerTf.data = tf[it.first];
         for (int i = 0; i < df[it.first]; ++i) {
-            int docId = docIds[it.first][i];
-            int tfD = tf[it.first][i];
+            int docId = readerDocId.getNext();
+            int tfD = readerTf.getNext();
             auto it2 = lower_bound(filtred.begin(), filtred.end(), docId);
             if ((!isBoolean && tfD) || (it2 != filtred.end() && *it2 == docId)) {
                 double add = (1 + log(it.second)) * (1 + log(tfD)) * idf;
@@ -114,8 +120,8 @@ int main() {
         printf("Critical error: error while reading numberOfTokens\n");
         return 1;
     }
-    len = new double[numberOfArticles];
-    if (fread(len, sizeof(double), numberOfArticles, stat) != numberOfArticles) {
+    len = new double[numberOfArticles + 1];
+    if (fread(len + 1, sizeof(double), numberOfArticles, stat) != numberOfArticles) {
         printf("Critical error: error while reading Articles len\n");
         return 1;
     }
@@ -132,10 +138,16 @@ int main() {
 
 
     FILE *tfIn = fopen("Index/tf", "rb");
-    tf = new int*[numberOfTokens + 1];
+    tf = new unsigned char*[numberOfTokens + 1];
     for (int i = 1; i <= numberOfTokens; ++i) {
-        tf[i] = new int[df[i]];
-        if (fread(tf[i], sizeof(int), df[i], tfIn) != df[i]) {
+        int sz = 0;
+        unsigned char tmp;
+        do {
+            fread(&tmp, sizeof(unsigned char), 1, tfIn);
+            sz = (sz << 7) | (tmp & 127);
+        } while ((tmp & 128) == 0);
+        tf[i] = new unsigned char[sz];
+        if (fread(tf[i], sizeof(unsigned char), sz, tfIn) != sz) {
             printf("Critical error: error while reading %d tf list\n", i);
             return 1;
         }
@@ -144,15 +156,41 @@ int main() {
 
 
     FILE *mainIndexIn = fopen("Index/mainIndex", "rb");
-    docIds = new int*[numberOfTokens + 1];
+    docIds = new unsigned char*[numberOfTokens + 1];
     for (int i = 1; i <= numberOfTokens; ++i) {
-        docIds[i] = new int[df[i]];
-        if (fread(docIds[i], sizeof(int), df[i], mainIndexIn) != df[i]) {
+        int sz = 0;
+        unsigned char tmp;
+        do {
+            fread(&tmp, sizeof(unsigned char), 1, mainIndexIn);
+            sz = (sz << 7) | (tmp & 127);
+        } while ((tmp & 128) == 0);
+        docIds[i] = new unsigned char[sz];
+        if (fread(docIds[i], sizeof(unsigned char), sz, mainIndexIn) != sz) {
             printf("Critical error: error while reading %d docIds list\n", i);
             return 1;
         }
     }
     fclose(mainIndexIn);
+
+
+    FILE *coordIn = fopen("Index/coord", "rb");
+    coord = new unsigned char*[numberOfTokens + 1];
+    for (int i = 1; i <= numberOfTokens; ++i) {
+        int sz = 0;
+        unsigned char tmp;
+        do {
+            fread(&tmp, sizeof(unsigned char), 1, coordIn);
+            sz = (sz << 7) | (tmp & 127);
+        } while ((tmp & 128) == 0);
+        printf("%d: expect %d bytes\n", i, sz);
+        if (sz == 0) return 0;
+        coord[i] = new unsigned char[sz];
+        if (fread(coord[i], sizeof(unsigned char), sz, coordIn) != sz) {
+            printf("Critical error: error while reading %d coord list\n", i);
+            return 1;
+        }
+    }
+    fclose(coordIn);
     
 
     printf("numOfT = %d numOfA = %d\n", numberOfTokens, numberOfArticles);
@@ -162,8 +200,8 @@ int main() {
     char *fifoPyCpp = "/tmp/pipePyCpp";
     char *fifoCppPy = "/tmp/pipeCppPy";
     mkfifo(fifoCppPy, 0666);
-    const int BUF_SIZE = 500000;
-    char buf[BUF_SIZE];
+    const int BUF_SIZE = 500                ;
+    char *buf = new char[BUF_SIZE];
     for (;;) {
         fdPyCpp = fopen(fifoPyCpp, "r");
         fscanf(fdPyCpp, "%[^\n]s", buf);
@@ -198,9 +236,12 @@ int main() {
     for (int i = 1; i <= numberOfTokens; ++i) {
         delete [] docIds[i];
         delete [] tf[i];
+        delete [] coord[i];
     }
     delete [] docIds;
     delete [] tf;
     delete [] df;
     delete [] len;
+    delete [] coord;
+    delete [] buf;
 }

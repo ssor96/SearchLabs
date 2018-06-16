@@ -175,7 +175,7 @@ def get_response_from_engine():
             s = f.readline()
         current_res = [int(x) for x in s.split()]
     else:
-        current_res = list(range(100))
+        current_res = list(range(1, 101))
     # print('get "', s, '"')
 
 
@@ -262,6 +262,7 @@ def search():
 if __name__ == "__main__":
     if not os.path.exists(path_py_cpp):
         os.mkfifo(path_py_cpp)
+    article_titles.append('notValidId')
     with open('../Index/article_titles.txt', 'r') as f:
         for line in f:
             # wid, title = line.split(' ', 1) 
