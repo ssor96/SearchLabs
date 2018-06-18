@@ -110,7 +110,7 @@ if __name__ == '__main__':
     article_titles = open('Index/article_titles.txt', 'w')
     parse_dir(sys.argv[1])
     article_titles.close()
-    token_dict = open('Index/token_dict.txt', 'w')
+    token_dict = open('Index/pre_token_dict.txt', 'w')
     for tok, _ in sorted(tok_to_int.items(), key = lambda x:x[1]):
         token_dict.write(tok + '\n')
     token_dict.close()

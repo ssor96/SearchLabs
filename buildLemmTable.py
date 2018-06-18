@@ -1,6 +1,6 @@
 from struct import pack
 
-lemm_td = open('Index/lemm_token_dict.txt', 'w')
+lemm_td = open('Index/token_dict.txt', 'w')
 lemm_table = open('Index/lemm_table', 'wb')
 lst = 1
 with open('Index/lemm.txt', 'r') as lemm:
