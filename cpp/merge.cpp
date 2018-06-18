@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
         if (cur.tokId != prevTokId || cur.docId != prevDocId) {
             tfOut.write(tf);
             mainIndex.write(prevDocId - prevMI - 1);
-            sqLen[prevDocId] += sq(tf);
+            sqLen[prevDocId] += sq(1 + log(tf));
             prevMI = prevDocId;
             prevDocId = cur.docId;
             df++;
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
     tfOut.flush();
     mainIndex.flush();
 
-    sqLen[prevDocId] += sq(tf);
+    sqLen[prevDocId] += sq(1 + log(tf));
     bufDf[pDf++] = df;
 
     fwrite(bufDf, sizeof(int), pDf, dfOut);
