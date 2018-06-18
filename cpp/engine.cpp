@@ -182,8 +182,6 @@ int main() {
             fread(&tmp, sizeof(unsigned char), 1, coordIn);
             sz = (sz << 7) | (tmp & 127);
         } while ((tmp & 128) == 0);
-        printf("%d: expect %d bytes\n", i, sz);
-        if (sz == 0) return 0;
         coord[i] = new unsigned char[sz];
         if (fread(coord[i], sizeof(unsigned char), sz, coordIn) != sz) {
             printf("Critical error: error while reading %d coord list\n", i);
