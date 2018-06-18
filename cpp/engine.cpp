@@ -8,6 +8,7 @@
 #include <vector>
 #include <algorithm>
 #include <functional>
+#include <chrono>
 #include "ListIterator.h"
 #include "ListIteratorRead.h"
 #include "ListIteratorNot.h"
@@ -76,8 +77,18 @@ void buildTree(ListIterator *&cur, char *query, int &pos,
     cur->next();
 }
 
+struct rankKey {
+    double idfSum, tfIdf;
+    bool operator < (const rankKey &other) const {
+        if (fabs(idfSum - other.idfSum) < 1e-8) {
+            return tfIdf < other.tfIdf;
+        }
+        return idfSum < other.idfSum;
+    }
+};
+
 void rankDocs(vector<int> &filtred, map<int, int> &tfQ, 
-              vector<pair<pair<double, double>, int>> &res, bool isBoolean) {
+              vector<pair<rankKey, int>> &res, bool isBoolean) {
     map<int, double> score;
     map<int, double> score2;
     if (isBoolean) {
@@ -107,7 +118,7 @@ void rankDocs(vector<int> &filtred, map<int, int> &tfQ,
     for (auto &it: score) {
         res.push_back({{score2[it.first], it.second / len[it.first]}, it.first});
     }
-    std::sort(res.begin(), res.end(), std::greater<pair<pair<double, double>, int>>());
+    std::sort(res.begin(), res.end(), std::greater<pair<rankKey, int>>());
 }
 
 int main() {
@@ -202,11 +213,16 @@ int main() {
     char *buf = new char[BUF_SIZE];
     for (;;) {
         fdPyCpp = fopen(fifoPyCpp, "r");
+        if (fdPyCpp == NULL) {
+            printf("Cannot open pyCpp pipe. Try to start web before engine\n");
+        }
         fscanf(fdPyCpp, "%[^\n]s", buf);
         printf("GET %s\n", buf);
         fgetc(fdPyCpp);
         fclose(fdPyCpp);
         
+        auto start = std::chrono::steady_clock::now();
+
         ListIterator *queryIterator;
         bool isBoolean = buf[0] - '0';
         int pos = 1;
@@ -220,9 +236,14 @@ int main() {
                 queryIterator->next();
             }
         }
-        vector<pair<pair<double, double>, int>> res;
+        vector<pair<rankKey, int>> res;
         rankDocs(filtred, tfQ, res, isBoolean);
         delete queryIterator;
+
+        auto end = std::chrono::steady_clock::now();
+
+        printf("%lf ms\n", std::chrono::duration<double, std::milli>(end - start).count());
+
         fdCppPy = fopen(fifoCppPy, "w");
         for (auto &it: res) {
             fprintf(fdCppPy, "%d ", it.second);
