@@ -13,11 +13,11 @@ struct ListIteratorQuote::Coord {
     void set(int tokId) {
         id = tokId;
         readerC.data = coord[id];
-        readedC = readerC.getNext();
         readerDocId.data = docIds[id];
-        readedDocId = readerDocId.getNext();
         readerTf.data = tf[id];
+        readedC = readerC.getNext();
         readedTf = readerTf.getNext();
+        readedDocId = readerDocId.getNext();
         curDoc = 0;
         curPos = 0;
     }
@@ -43,9 +43,10 @@ struct ListIteratorQuote::Coord {
                 curPos++;
             }        
             curDoc++;
+            readerC.prev = 0;
+            readedC = readerC.getNext();
             readedTf = readerTf.getNext();
             readedDocId = readerDocId.getNext();
-            readerC.prev = 0;
         }
         curPos = 0;
         return true;
