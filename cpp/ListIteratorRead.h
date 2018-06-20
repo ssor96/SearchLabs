@@ -1,18 +1,15 @@
 #include "ListIterator.h"
 #include "Reader.h"
+#include "JumpTable.h"
 
 class ListIteratorRead : ListIterator {
 private:
-
+    DiffReader reader;
+    JumpTable jumpTable;
+    int pos;
 public:
     int sz;
-    int pos;
-    unsigned char *elements;
-    DiffReader reader;
-    ListIteratorRead(unsigned char *elements, int sz): elements(elements), sz(sz) {
-        pos = 0;
-        reader.data = elements;
-    }
+    ListIteratorRead(uchar*, uchar*, int);
     void next();
     ~ListIteratorRead(){}
 };

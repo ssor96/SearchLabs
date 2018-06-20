@@ -1,7 +1,7 @@
 #include "Writer.h"
 
-Writer::Writer(char *name) {
-    buf = new unsigned char[BUF_SIZE];
+Writer::Writer(const char *name) {
+    buf = new uchar[BUF_SIZE];
     f = fopen(name, "wb");
     p = 4;
 }
@@ -9,7 +9,7 @@ Writer::Writer(char *name) {
 void Writer::write(int val) {
     bool was = false;
     for (int j = 4; j >= 1; --j) {
-        unsigned char tmp = (val >> (7 * j)) & 127;
+        uchar tmp = (val >> (7 * j)) & 127;
         if (tmp || was) {
             was = true;
             buf[p++] = tmp;

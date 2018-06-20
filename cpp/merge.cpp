@@ -2,12 +2,13 @@
 #include <cmath>
 #include <set>
 #include "Writer.h"
+#include "types.h"
 
 struct fileTop {
     int tokId, docId, tok_pos;
     FILE* f;
     fileTop(){}
-    fileTop(char *name) {
+    fileTop(const char *name) {
         f = fopen(name, "rb");
         readNext();
     }

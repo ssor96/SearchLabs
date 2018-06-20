@@ -1,7 +1,7 @@
 #include "ListIteratorQuote.h"
 
 extern const int *df;
-extern const unsigned char **docIds, **tf, **coord;
+extern const uchar **docIds, **tf, **coord;
 
 struct ListIteratorQuote::Coord {
     DiffReader readerC;

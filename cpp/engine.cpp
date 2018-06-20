@@ -24,7 +24,7 @@ using std::pair;
 int numberOfTokens;
 int numberOfArticles;
 int *df;
-unsigned char **docIds, **tf, **coord;
+uchar **docIds, **tf, **coord, **jumps;
 double *len;
 
 void buildTree(ListIterator *&cur, char *query, int &pos, 
@@ -69,7 +69,7 @@ void buildTree(ListIterator *&cur, char *query, int &pos,
         }
         orderedToks.push_back(num);
         tfQ[num]++;
-        cur = (ListIterator*)new ListIteratorRead(docIds[num], df[num]);
+        cur = (ListIterator*)new ListIteratorRead(docIds[num], jumps[num], df[num]);
     }
     else {
         printf("OMG FAILED\n");
@@ -121,6 +121,26 @@ void rankDocs(vector<int> &filtred, map<int, int> &tfQ,
     std::sort(res.begin(), res.end(), std::greater<pair<rankKey, int>>());
 }
 
+uchar** readData(const char *fileName, int dataSz) {
+    FILE *f = fopen(fileName, "rb");
+    uchar **data = new uchar*[dataSz + 1];
+    for (int i = 1; i <= dataSz; ++i) {
+        int sz = 0;
+        uchar tmp;
+        do {
+            fread(&tmp, sizeof(uchar), 1, f);
+            sz = (sz << 7) | (tmp & 127);
+        } while ((tmp & 128) == 0);
+        data[i] = new uchar[sz];
+        if (fread(data[i], sizeof(uchar), sz, f) != sz) {
+            printf("Critical error: error while reading %d data list\n", i);
+            exit(1);
+        }
+    }
+    fclose(f);
+    return data;
+}
+
 int main() {
     FILE *stat = fopen("Index/stat", "rb");
     if (fread(&numberOfArticles, sizeof(int), 1, stat) != 1) {
@@ -148,66 +168,21 @@ int main() {
     fclose(dfIn);
 
 
-    FILE *tfIn = fopen("Index/tf", "rb");
-    tf = new unsigned char*[numberOfTokens + 1];
-    for (int i = 1; i <= numberOfTokens; ++i) {
-        int sz = 0;
-        unsigned char tmp;
-        do {
-            fread(&tmp, sizeof(unsigned char), 1, tfIn);
-            sz = (sz << 7) | (tmp & 127);
-        } while ((tmp & 128) == 0);
-        tf[i] = new unsigned char[sz];
-        if (fread(tf[i], sizeof(unsigned char), sz, tfIn) != sz) {
-            printf("Critical error: error while reading %d tf list\n", i);
-            return 1;
-        }
-    }
-    fclose(tfIn);
+    tf = readData("Index/tf", numberOfTokens);
 
+    docIds = readData("Index/mainIndex", numberOfTokens);
 
-    FILE *mainIndexIn = fopen("Index/mainIndex", "rb");
-    docIds = new unsigned char*[numberOfTokens + 1];
-    for (int i = 1; i <= numberOfTokens; ++i) {
-        int sz = 0;
-        unsigned char tmp;
-        do {
-            fread(&tmp, sizeof(unsigned char), 1, mainIndexIn);
-            sz = (sz << 7) | (tmp & 127);
-        } while ((tmp & 128) == 0);
-        docIds[i] = new unsigned char[sz];
-        if (fread(docIds[i], sizeof(unsigned char), sz, mainIndexIn) != sz) {
-            printf("Critical error: error while reading %d docIds list\n", i);
-            return 1;
-        }
-    }
-    fclose(mainIndexIn);
+    coord = readData("Index/coord", numberOfTokens);
 
-
-    FILE *coordIn = fopen("Index/coord", "rb");
-    coord = new unsigned char*[numberOfTokens + 1];
-    for (int i = 1; i <= numberOfTokens; ++i) {
-        int sz = 0;
-        unsigned char tmp;
-        do {
-            fread(&tmp, sizeof(unsigned char), 1, coordIn);
-            sz = (sz << 7) | (tmp & 127);
-        } while ((tmp & 128) == 0);
-        coord[i] = new unsigned char[sz];
-        if (fread(coord[i], sizeof(unsigned char), sz, coordIn) != sz) {
-            printf("Critical error: error while reading %d coord list\n", i);
-            return 1;
-        }
-    }
-    fclose(coordIn);
+    jumps = readData("Index/jumpTables", numberOfTokens);
     
 
     printf("numOfT = %d numOfA = %d\n", numberOfTokens, numberOfArticles);
     printf("READ\n");
     
     FILE *fdPyCpp, *fdCppPy;
-    char *fifoPyCpp = "/tmp/pipePyCpp";
-    char *fifoCppPy = "/tmp/pipeCppPy";
+    const char *fifoPyCpp = "/tmp/pipePyCpp";
+    const char *fifoCppPy = "/tmp/pipeCppPy";
     mkfifo(fifoCppPy, 0666);
     const int BUF_SIZE = 500                ;
     char *buf = new char[BUF_SIZE];
@@ -215,6 +190,7 @@ int main() {
         fdPyCpp = fopen(fifoPyCpp, "r");
         if (fdPyCpp == NULL) {
             printf("Cannot open pyCpp pipe. Try to start web before engine\n");
+            break;
         }
         fscanf(fdPyCpp, "%[^\n]s", buf);
         printf("GET %s\n", buf);
@@ -253,14 +229,16 @@ int main() {
     }
     // unlink(fifoCppPy);
     for (int i = 1; i <= numberOfTokens; ++i) {
-        delete [] docIds[i];
         delete [] tf[i];
+        delete [] docIds[i];
         delete [] coord[i];
+        delete [] jumps[i];
     }
-    delete [] docIds;
-    delete [] tf;
-    delete [] df;
     delete [] len;
+    delete [] df;
+    delete [] tf;
+    delete [] docIds;
     delete [] coord;
+    delete [] jumps;
     delete [] buf;
 }

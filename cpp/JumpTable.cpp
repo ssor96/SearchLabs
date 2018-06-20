@@ -1,6 +1,6 @@
-#include <JumpTable.h>
+#include "JumpTable.h"
 
-JumpTable::JumpTable(unsigned char *data) {
+void JumpTable::init(uchar *data) {
     val = 1;
     reader.data = data;
     next();

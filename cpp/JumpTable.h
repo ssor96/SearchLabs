@@ -1,11 +1,12 @@
-#include <Reader.h>
+#include "Reader.h"
+#include "types.h"
 
 class JumpTable {
 private:
     Reader reader;
     int val, p;
 public:
-    JumpTable(unsigned char *data);
+    void init(uchar *data);
     void next();
     int getVal() {
         return val;

@@ -1,25 +1,27 @@
 #ifndef __READER_H__
 #define __READER_H__
 
+#include "types.h"
+
 class Reader {
+protected:
+    int readInt();
 public:
-	const unsigned char *data;
-	int p;
-	Reader() {
-		p = 0;
-	}
-	int getNext();
+    const uchar *data;
+    int p;
+    Reader() {
+        p = 0;
+    }
+    int getNext();
 };
 
-class DiffReader {
+class DiffReader: public Reader {
 public:
-	const unsigned char *data;
-	int p;
-	int prev;
-	DiffReader() {
-		p = prev = 0;
-	}
-	int getNext();
+    int prev;
+    DiffReader() {
+        prev = p = 0;
+    }
+    int getNext();
 };
 
 #endif
