@@ -12,6 +12,9 @@ public:
     Reader() {
         p = 0;
     }
+    void setPos(int pp) {
+        p = pp;
+    }
     int getNext();
 };
 

@@ -3,9 +3,15 @@
 void ListIteratorAnd::next() {
     while (l->ok && r->ok) {
         if (l->cur < r->cur) {
+            if (l->jump(r->cur)) {
+                continue;
+            }
             l->next();
         }
         else if (r->cur < l->cur) {
+            if (r->jump(l->cur)) {
+                continue;
+            }
             r->next();
         }
         else break;

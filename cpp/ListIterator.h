@@ -1,5 +1,5 @@
-#ifndef __LIST_ITERATOR__
-#define __LIST_ITERATOR__
+#ifndef __LIST_ITERATOR_H__
+#define __LIST_ITERATOR_H__
 
 #include "types.h"
 
@@ -11,7 +11,7 @@ public:
     bool ok = true;
     virtual void next() = 0;
     bool jump(int mx) {
-    	return false;
+        return false;
     }
     virtual ~ListIterator(){};
 };

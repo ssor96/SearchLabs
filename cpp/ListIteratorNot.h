@@ -1,6 +1,6 @@
 #include "ListIterator.h"
 
-class ListIteratorNot : ListIterator {
+class ListIteratorNot : public ListIterator {
 private:
 
 public:

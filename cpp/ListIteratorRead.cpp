@@ -8,11 +8,22 @@ ListIteratorRead::ListIteratorRead(uchar *readerData, uchar *jumpTableData, int 
 }
 
 void ListIteratorRead::next() {
-    if (pos == sz) {
+    if (reader.p == sz) {
         ok = false;
     }
     else {
         cur = reader.getNext();
-        pos++;
+        if (reader.p == jumpTable.getPos()) {
+            jumpTable.next();
+        }
     }
+}
+
+bool ListIteratorRead::jump(int mx) {
+    while (jumpTable.getVal() && jumpTable.getVal() <= mx) {
+        reader.setPos(jumpTable.getPos());
+        cur = jumpTable.getVal();
+        jumpTable.next();
+    }
+    return cur == mx;
 }

@@ -23,7 +23,7 @@ using std::pair;
 
 int numberOfTokens;
 int numberOfArticles;
-int *df;
+int *df, *byteLen;
 uchar **docIds, **tf, **coord, **jumps;
 double *len;
 
@@ -69,7 +69,7 @@ void buildTree(ListIterator *&cur, char *query, int &pos,
         }
         orderedToks.push_back(num);
         tfQ[num]++;
-        cur = (ListIterator*)new ListIteratorRead(docIds[num], jumps[num], df[num]);
+        cur = (ListIterator*)new ListIteratorRead(docIds[num], jumps[num], byteLen[num]);
     }
     else {
         printf("OMG FAILED\n");
@@ -121,16 +121,17 @@ void rankDocs(vector<int> &filtred, map<int, int> &tfQ,
     std::sort(res.begin(), res.end(), std::greater<pair<rankKey, int>>());
 }
 
-uchar** readData(const char *fileName, int dataSz) {
+uchar** readData(const char *fileName, int *bLen, int dataSz) {
     FILE *f = fopen(fileName, "rb");
     uchar **data = new uchar*[dataSz + 1];
+    uchar tmp;
     for (int i = 1; i <= dataSz; ++i) {
         int sz = 0;
-        uchar tmp;
         do {
             fread(&tmp, sizeof(uchar), 1, f);
             sz = (sz << 7) | (tmp & 127);
         } while ((tmp & 128) == 0);
+        bLen[i] = sz;
         data[i] = new uchar[sz];
         if (fread(data[i], sizeof(uchar), sz, f) != sz) {
             printf("Critical error: error while reading %d data list\n", i);
@@ -167,15 +168,15 @@ int main() {
     }
     fclose(dfIn);
 
+    byteLen = new int[numberOfTokens + 1];
 
-    tf = readData("Index/tf", numberOfTokens);
+    tf = readData("Index/tf", byteLen, numberOfTokens);
 
-    docIds = readData("Index/mainIndex", numberOfTokens);
+    coord = readData("Index/coord", byteLen, numberOfTokens);
 
-    coord = readData("Index/coord", numberOfTokens);
+    jumps = readData("Index/jumpTables", byteLen, numberOfTokens);
 
-    jumps = readData("Index/jumpTables", numberOfTokens);
-    
+    docIds = readData("Index/mainIndex", byteLen, numberOfTokens);
 
     printf("numOfT = %d numOfA = %d\n", numberOfTokens, numberOfArticles);
     printf("READ\n");

@@ -3,7 +3,7 @@
 #include "ListIterator.h"
 #include "Reader.h"
 
-class ListIteratorQuote : ListIterator {
+class ListIteratorQuote : public ListIterator {
 private:
     struct Coord;
     Coord *coords;

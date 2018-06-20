@@ -12,4 +12,7 @@ void JumpTable::next() {
     if (val) {
         p = reader.getNext();
     }
+    else {
+        p = -1;
+    }
 }
