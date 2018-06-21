@@ -10,7 +10,7 @@ public:
     T cur;
     bool ok = true;
     virtual void next() = 0;
-    bool jump(int mx) {
+    virtual bool jump(int mx) {
         return false;
     }
     virtual ~ListIterator(){};

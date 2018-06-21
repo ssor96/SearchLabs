@@ -178,6 +178,10 @@ int main() {
 
     docIds = readData("Index/mainIndex", byteLen, numberOfTokens);
 
+    byteLen[0] = 0;
+    jumps[0] = new uchar[1];
+    jumps[0][0] = 128;
+
     printf("numOfT = %d numOfA = %d\n", numberOfTokens, numberOfArticles);
     printf("READ\n");
     
@@ -214,7 +218,7 @@ int main() {
             }
         }
         vector<pair<rankKey, int>> res;
-        rankDocs(filtred, tfQ, res, isBoolean);
+        // rankDocs(filtred, tfQ, res, isBoolean);
         delete queryIterator;
 
         auto end = std::chrono::steady_clock::now();
@@ -222,13 +226,14 @@ int main() {
         printf("%lf ms\n", std::chrono::duration<double, std::milli>(end - start).count());
 
         fdCppPy = fopen(fifoCppPy, "w");
-        for (auto &it: res) {
-            fprintf(fdCppPy, "%d ", it.second);
+        for (auto &it: filtred) {
+            fprintf(fdCppPy, "%d ", it);
         }
         fprintf(fdCppPy, "\n");
         fclose(fdCppPy);
     }
     // unlink(fifoCppPy);
+    delete [] jumps[0];
     for (int i = 1; i <= numberOfTokens; ++i) {
         delete [] tf[i];
         delete [] docIds[i];
@@ -237,6 +242,7 @@ int main() {
     }
     delete [] len;
     delete [] df;
+    delete [] byteLen;
     delete [] tf;
     delete [] docIds;
     delete [] coord;

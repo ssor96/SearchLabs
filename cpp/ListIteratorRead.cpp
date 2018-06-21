@@ -1,4 +1,5 @@
 #include "ListIteratorRead.h"
+#include <cstdio>
 
 ListIteratorRead::ListIteratorRead(uchar *readerData, uchar *jumpTableData, int sz):
                                                 sz(sz) {
@@ -20,8 +21,10 @@ void ListIteratorRead::next() {
 }
 
 bool ListIteratorRead::jump(int mx) {
+    // return false;
     while (jumpTable.getVal() && jumpTable.getVal() <= mx) {
         reader.setPos(jumpTable.getPos());
+        reader.prev = jumpTable.getVal();
         cur = jumpTable.getVal();
         jumpTable.next();
     }

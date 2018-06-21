@@ -53,23 +53,34 @@ int main(int argc, char **argv) {
     int numberOfArticles;
     fread(&numberOfArticles, sizeof(int), 1, stat);
     fclose(stat);
+    const int JUMP_LEN = sqrt(numberOfArticles);
     double *sqLen = new double[numberOfArticles];
     Writer mainIndex("Index/mainIndex");
     int prevMI = 0;
     Writer tfOut("Index/tf");
     Writer coord("Index/coord");
     int prevC = 0;
+    Writer jumpsOut("Index/jumpTables");
     FILE *dfOut = fopen("Index/df", "wb");
     static int bufDf[6000000];
     int tf = 0;
     int df = 0;
     int pDf = 0;
+    int jc = 0;
     while (!st.empty()) {
         fileTop cur = *st.begin();
         st.erase(st.begin());
         if (cur.tokId != prevTokId || cur.docId != prevDocId) {
             tfOut.write(tf);
             mainIndex.write(prevDocId - prevMI - 1);
+            if (jc + 1 == JUMP_LEN) {
+                jc = 0;
+                jumpsOut.write(prevDocId);
+                jumpsOut.write(mainIndex.p - 4);
+            }
+            else {
+                jc++;
+            }
             sqLen[prevDocId] += sq(1 + log(tf));
             prevMI = prevDocId;
             prevDocId = cur.docId;
@@ -78,6 +89,8 @@ int main(int argc, char **argv) {
             prevC = 0;
         }
         if (cur.tokId != prevTokId) {
+            jumpsOut.write(0);
+            jumpsOut.flush();
             coord.flush();
             tfOut.flush();
             mainIndex.flush();
@@ -85,6 +98,7 @@ int main(int argc, char **argv) {
             prevTokId = cur.tokId;
             prevMI = 0;
             df = 0;
+            jc = 0;
         }
         coord.write(cur.tok_pos - prevC - 1);
         prevC = cur.tok_pos;
@@ -99,9 +113,16 @@ int main(int argc, char **argv) {
 
     tfOut.write(tf);
     mainIndex.write(prevDocId - prevMI - 1);
+    if (jc + 1 == JUMP_LEN) {
+        jumpsOut.write(prevDocId);
+        jumpsOut.write(mainIndex.p - 4);
+    }
+    jumpsOut.write(0);
+    df++;
     coord.flush();
     tfOut.flush();
     mainIndex.flush();
+    jumpsOut.flush();
 
     sqLen[prevDocId] += sq(1 + log(tf));
     bufDf[pDf++] = df;
