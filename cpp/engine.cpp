@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <cstdio>
 #include <cmath>
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <algorithm>
 #include <functional>
@@ -17,7 +17,7 @@
 #include "ListIteratorQuote.h"
 #include "Reader.h"
 
-using std::map;
+using std::unordered_map;
 using std::vector;
 using std::pair;
 
@@ -28,7 +28,7 @@ uchar **docIds, **tf, **coord, **jumps;
 double *len;
 
 void buildTree(ListIterator *&cur, char *query, int &pos, 
-               map<int, int> &tfQ, 
+               unordered_map<int, int> &tfQ, 
                vector<int> &orderedToks) {
     if (query[pos] == '&') {
         cur = (ListIterator*)new ListIteratorAnd;
@@ -87,10 +87,10 @@ struct rankKey {
     }
 };
 
-void rankDocs(vector<int> &filtred, map<int, int> &tfQ, 
+void rankDocs(vector<int> &filtred, unordered_map<int, int> &tfQ, 
               vector<pair<rankKey, int>> &res, bool isBoolean) {
-    map<int, double> score;
-    map<int, double> score2;
+    unordered_map<int, double> score;
+    unordered_map<int, double> score2;
     if (isBoolean) {
         for (int docId: filtred) {
             score[docId] = 0;
@@ -207,7 +207,7 @@ int main() {
         ListIterator *queryIterator;
         bool isBoolean = buf[0] - '0';
         int pos = 1;
-        map<int, int> tfQ;
+        unordered_map<int, int> tfQ;
         vector<int> dummy;
         buildTree(queryIterator, buf, pos, tfQ, dummy);
         vector<int> filtred;
@@ -218,7 +218,7 @@ int main() {
             }
         }
         vector<pair<rankKey, int>> res;
-        // rankDocs(filtred, tfQ, res, isBoolean);
+        rankDocs(filtred, tfQ, res, isBoolean);
         delete queryIterator;
 
         auto end = std::chrono::steady_clock::now();
@@ -226,8 +226,8 @@ int main() {
         printf("%lf ms\n", std::chrono::duration<double, std::milli>(end - start).count());
 
         fdCppPy = fopen(fifoCppPy, "w");
-        for (auto &it: filtred) {
-            fprintf(fdCppPy, "%d ", it);
+        for (auto &it: res) {
+            fprintf(fdCppPy, "%d ", it.second);
         }
         fprintf(fdCppPy, "\n");
         fclose(fdCppPy);
