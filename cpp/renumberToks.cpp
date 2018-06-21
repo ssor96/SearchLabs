@@ -2,6 +2,7 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <algorithm>
+#include <vector>
 
 struct info {
     int tokId, docId, tok_pos;
@@ -18,13 +19,39 @@ struct info {
 
 int main(int argc, char **argv) {
     struct stat st;
-    stat("Index/lemm_table", &st);
-    int sz = st.st_size / sizeof(int);
-    int *newId = new int[sz + 1];
-    newId[0] = 0;
-    FILE *f = fopen("Index/lemm_table", "rb");
-    fread(newId + 1, sizeof(int), sz, f);
-    fclose(f);
+    int *newId;
+    
+    {
+        stat("Index/lemm_table", &st);
+        int sz = st.st_size / sizeof(int);
+        FILE *f;
+
+        newId = new int[sz + 1];
+        newId[0] = 0;
+        
+        f = fopen("Index/lemm_table", "rb");
+        fread(newId + 1, sizeof(int), sz, f);
+        fclose(f);
+        
+        stat("Index/pre_titles_toks", &st);
+        sz = st.st_size / sizeof(int);
+        int *titlesToksData = new int[sz];
+        
+        f = fopen("Index/pre_titles_toks", "rb");
+        fread(titlesToksData, sizeof(int), sz, f);
+        fclose(f);
+    
+        for (int i = 0; i < sz; ++i) {
+            titlesToksData[i] = newId[titlesToksData[i]];
+        }
+        
+        f = fopen("Index/titles_toks", "wb");
+        fwrite(titlesToksData, sizeof(int), sz, f);
+        fclose(f);
+
+        delete [] titlesToksData;
+    }
+
     for (int i = 1; i < argc; ++i) {
         stat(argv[i], &st);
         int sz = st.st_size / sizeof(info);

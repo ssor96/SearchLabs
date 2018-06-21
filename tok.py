@@ -33,7 +33,7 @@ def strip_accents(s):
 
 
 def normalize(token):
-    return strip_accents(token.lower())
+    return strip_accents(token).lower()
 
 
 lst_tok_id = 1
@@ -78,13 +78,14 @@ def parse_file(file_name):
         if s.startswith('<doc '):
             tok_pos = 1
             l = s.split('"') # [id=, id, url=, url, title=, title]
+            for tok_id in parse_str(l[-2]) + [0]:
+                titles_toks.write(pack('<I', tok_id))
             article_titles.write(doc_feature + str(line) + '\n')
         elif s.startswith('</doc>'):
             current_doc_id += 1
         else:
-            cur_toks = parse_str(s)
-            for tok in cur_toks:
-                file_out.write(pack('<III', tok, current_doc_id, tok_pos))
+            for tok_id in parse_str(s):
+                file_out.write(pack('<III', tok_id, current_doc_id, tok_pos))
                 tok_pos += 1
         line += 1
     file_in.close()
@@ -108,6 +109,8 @@ if __name__ == '__main__':
         exit(1)
     global article_titles
     article_titles = open('Index/article_titles.txt', 'w')
+    global titles_toks
+    titles_toks = open('Index/pre_titles_toks', 'wb')
     parse_dir(sys.argv[1])
     article_titles.close()
     token_dict = open('Index/pre_token_dict.txt', 'w')

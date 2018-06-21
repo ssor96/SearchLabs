@@ -210,7 +210,7 @@ def get_title(path_to_file, lines_to_skip):
             if not snippet:
                 snippet = s.strip()
             s = next(f)
-        print('snip =', snippet)
+        # print('snip =', snippet)
     return (l[5], snippet, int(l[1]))
 
 
@@ -239,7 +239,7 @@ def search():
         return 'Wrong request format'
     print('User req', prepared)
     if prepared != current_query:
-        current_query = prepared
+        # current_query = prepared
         send_req_to_engine(prepared)
         get_response_from_engine()
     search_result = []

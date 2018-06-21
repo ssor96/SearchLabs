@@ -10,7 +10,7 @@ with open('Index/lemm.txt', 'r') as lemm:
         l = l.strip()
         if l.startswith('{'):
             en = 1
-            while s[en] not in "[?|}]":
+            while l[en] not in "[?|}]":
                 en += 1
             l = l[1:en]
         if l not in w:

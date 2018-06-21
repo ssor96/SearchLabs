@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <cstdio>
 #include <cmath>
+#include <map>
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
@@ -16,16 +17,19 @@
 #include "ListIteratorAnd.h"
 #include "ListIteratorQuote.h"
 #include "Reader.h"
+#include "types.h"
 
 using std::unordered_map;
 using std::vector;
 using std::pair;
+using std::map;
 
 int numberOfTokens;
 int numberOfArticles;
-int *df, *byteLen;
+int *df, *byteLen, *titleLen;
 uchar **docIds, **tf, **coord, **jumps;
 double *len;
+map<int, int> *titleToks;
 
 void buildTree(ListIterator *&cur, char *query, int &pos, 
                unordered_map<int, int> &tfQ, 
@@ -87,6 +91,10 @@ struct rankKey {
     }
 };
 
+inline double tfIdfFormula(int tf1, int tf2, double idf) {
+    return (1 + log(tf1)) * (1 + log(tf2)) * idf;
+}
+
 void rankDocs(vector<int> &filtred, unordered_map<int, int> &tfQ, 
               vector<pair<rankKey, int>> &res, bool isBoolean) {
     unordered_map<int, double> score;
@@ -108,9 +116,12 @@ void rankDocs(vector<int> &filtred, unordered_map<int, int> &tfQ,
             int tfD = readerTf.getNext();
             auto it2 = lower_bound(filtred.begin(), filtred.end(), docId);
             if ((!isBoolean && tfD) || (it2 != filtred.end() && *it2 == docId)) {
-                double add = (1 + log(it.second)) * (1 + log(tfD)) * idf;
+                double add = tfIdfFormula(it.second, tfD, idf);
                 score[docId] += add;
                 score2[docId] += idf;
+                if (titleToks[docId].find(it.first) != titleToks[docId].end()) {
+                    score2[docId] += it.second * titleToks[docId][it.first] * idf / titleLen[docId];
+                }
             }
         }
     }
@@ -143,30 +154,32 @@ uchar** readData(const char *fileName, int *bLen, int dataSz) {
 }
 
 int main() {
-    FILE *stat = fopen("Index/stat", "rb");
-    if (fread(&numberOfArticles, sizeof(int), 1, stat) != 1) {
-        printf("Critical error: error while reading numberOfArticles\n");
-        return 1;
-    }
-    if (fread(&numberOfTokens, sizeof(int), 1, stat) != 1) {
-        printf("Critical error: error while reading numberOfTokens\n");
-        return 1;
-    }
-    len = new double[numberOfArticles + 1];
-    if (fread(len + 1, sizeof(double), numberOfArticles, stat) != numberOfArticles) {
-        printf("Critical error: error while reading Articles len\n");
-        return 1;
-    }
-    fclose(stat);
+    {
+        FILE *stat = fopen("Index/stat", "rb");
+        if (fread(&numberOfArticles, sizeof(int), 1, stat) != 1) {
+            printf("Critical error: error while reading numberOfArticles\n");
+            return 1;
+        }
+        if (fread(&numberOfTokens, sizeof(int), 1, stat) != 1) {
+            printf("Critical error: error while reading numberOfTokens\n");
+            return 1;
+        }
+        len = new double[numberOfArticles + 1];
+        if (fread(len + 1, sizeof(double), numberOfArticles, stat) != numberOfArticles) {
+            printf("Critical error: error while reading Articles len\n");
+            return 1;
+        }
+        fclose(stat);
 
 
-    FILE *dfIn = fopen("Index/df", "rb");
-    df = new int[numberOfTokens + 1];
-    if (fread(df + 1, sizeof(int), numberOfTokens, dfIn) != numberOfTokens) {
-        printf("Critical error: error while reading df\n");
-        return 1;
+        FILE *dfIn = fopen("Index/df", "rb");
+        df = new int[numberOfTokens + 1];
+        if (fread(df + 1, sizeof(int), numberOfTokens, dfIn) != numberOfTokens) {
+            printf("Critical error: error while reading df\n");
+            return 1;
+        }
+        fclose(dfIn);
     }
-    fclose(dfIn);
 
     byteLen = new int[numberOfTokens + 1];
 
@@ -181,6 +194,31 @@ int main() {
     byteLen[0] = 0;
     jumps[0] = new uchar[1];
     jumps[0][0] = 128;
+
+    {
+        struct stat st;
+        stat("Index/titles_toks", &st);
+        int sz = st.st_size / sizeof(int);
+        int *titleTokData = new int[sz];
+        
+        FILE *f = fopen("Index/titles_toks", "rb");
+        fread(titleTokData, sizeof(int), sz, f);
+        fclose(f);
+
+        titleLen = new int[numberOfArticles + 1];
+        titleToks = new map<int, int>[numberOfArticles + 1];
+
+        int p = 0;
+        for (int i = 1; i <= numberOfArticles; ++i) {
+            titleLen[i] = p;
+            for (; titleTokData[p]; ++p) {
+                titleToks[i][titleTokData[p]]++;
+            }
+            titleLen[i] = p - titleLen[i];
+            ++p;
+        }
+        delete [] titleTokData;
+    }
 
     printf("numOfT = %d numOfA = %d\n", numberOfTokens, numberOfArticles);
     printf("READ\n");
@@ -247,5 +285,6 @@ int main() {
     delete [] docIds;
     delete [] coord;
     delete [] jumps;
+    delete [] titleToks;
     delete [] buf;
 }
