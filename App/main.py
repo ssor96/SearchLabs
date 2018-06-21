@@ -16,7 +16,7 @@ current_query = ''
 use_engine = True
 
 def parse_req(s):
-    norm = lambda x:str(tok_to_int.get(normalize(x), 0))
+    norm = lambda x:str(tok_to_int.get(lemmatize(normalize(x)), 0))
     l = []
     cur = ''
     boolean = False

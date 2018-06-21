@@ -20,9 +20,9 @@
 #include "types.h"
 
 using std::unordered_map;
+using std::map;
 using std::vector;
 using std::pair;
-using std::map;
 
 int numberOfTokens;
 int numberOfArticles;
