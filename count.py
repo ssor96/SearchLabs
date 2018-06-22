@@ -2,11 +2,12 @@ import sys
 import os
 from collections import defaultdict
 from pathlib import Path
-import nltk
 from struct import pack
 import tok
 
 token_count = defaultdict(int)
+fc = defaultdict(int)
+sc = defaultdict(int)
 
 def parse_file(file_name):
     file_in = open(file_name, 'r')
@@ -17,15 +18,16 @@ def parse_file(file_name):
         elif s.startswith('</doc>'):
             pass
         else:
-            for sent in nltk.sent_tokenize(s):
-                prev = ''
-                not_first = False
-                for w in tok.parse_str(sent):
-                    token_count[w] += 1
-                    if not_first:
-                        tuples.append((prev, w))
-                    prev = w
-                    not_first = True
+            prev = ''
+            not_first = False
+            for w in tok.parse_str(s):
+                token_count[w] += 1
+                if not_first:
+                    fc[prev] += 1
+                    sc[w] += 1
+                    tuples.append((prev, w))
+                prev = w
+                not_first = True
     file_in.close()
     output_file_name = os.path.join('Count/Parts', file_name)
     # path = Path(os.path.join('Count/Parts', file_name))
@@ -40,12 +42,12 @@ def parse_file(file_name):
             else:
                 # print(pa, pb, cc)
                 if a < pa:
-                    print('OBOSRALSYA')
-                    print(a, b)
+                    print(a, b, '!!!')
                     exit()
                 out.write(pack('<III', pa, pb, cc))
                 pa, pb, cc = a, b, 1
             # print(a, b)
+        out.write(pack('<III', pa, pb, cc))
     # print()
 
 
@@ -63,6 +65,9 @@ def parse_dir(dir_name):
 
 if __name__ == '__main__':
     parse_dir(sys.argv[1])
-    with open('pairs_dict', 'w') as f:
+    f2 = open('col_stat', 'wb')
+    with open('pairs_dict.txt', 'w') as f:
         for token, tid in sorted(tok.tok_to_int.items(), key = lambda x:x[1]):
-            f.write(token + ' ' + str(token_count[tid]) + '\n')
+            f.write(token + '\n')
+            f2.write(pack('<III', token_count[tid], fc[tid], sc[tid]))
+    f2.close()

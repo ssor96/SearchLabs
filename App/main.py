@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append('../')
 import time
+from collections import Counter
 from tok import is_valid_symbol, normalize, lemmatize
 from flask import Flask, request, render_template, send_from_directory
 
@@ -16,7 +17,10 @@ current_query = ''
 use_engine = True
 
 def parse_req(s):
-    norm = lambda x:str(tok_to_int.get(lemmatize(normalize(x)), 0))
+    to_norm_form = lambda x: normalize(x)
+    norm = lambda x:str(tok_to_int.get(lemmatize(to_norm_form(x)), 0))
+    tok_st = set()
+    tokCnt = []
     l = []
     cur = ''
     boolean = False
@@ -26,6 +30,7 @@ def parse_req(s):
             cur += s[i]
         else:
             if cur:
+                tok_st.add(to_norm_form(cur))
                 cur = norm(cur)
                 l.append('.' + cur)
             cur = ''
@@ -46,11 +51,13 @@ def parse_req(s):
                     if is_valid_symbol(s[i]):
                         cur += s[i]
                     elif cur:
+                        tok_st.add(to_norm_form(cur))
                         tmp += '.' + norm(cur)
                         cur = ''
                         cnt += 1
                     i += 1
                 if cur:
+                    tok_st.add(to_norm_form(cur))
                     tmp += '.' + norm(cur)
                     cnt += 1
                 cur = ''
@@ -76,6 +83,7 @@ def parse_req(s):
                     l.append(' ')
         i += 1
     if cur:
+        tok_st.add(to_norm_form(cur))
         cur = norm(cur)
         l.append('.' + cur)
     l2 = []
@@ -88,7 +96,7 @@ def parse_req(s):
         else:
             l2.append(l[i])
         i += 1
-    return l2, boolean
+    return l2, boolean, tok_st
 
 
 def prepare_query(l):
@@ -197,21 +205,141 @@ def favicon():
                           'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 
-def get_title(path_to_file, lines_to_skip):
+def get_title(path_to_file, lines_to_skip, query):
     with open(path_to_file, 'r') as f:
         for _ in range(lines_to_skip):
             next(f)
         s = next(f)
         l = s.split('"') # [id=, id, url=, url, title=, title]
-        next(f)
+        art_id = int(l[1])
+        title = l[5]
         s = next(f)
-        snippet = ''
+        pure_text = []
         while not s.startswith('</doc>'):
-            if not snippet:
-                snippet = s.strip()
+            pure_text.append(s.strip())
             s = next(f)
-        # print('snip =', snippet)
-    return (l[5], snippet, int(l[1]))
+        pure_text = ' '.join(pure_text)
+    MAX_SNIPPET_LENGTH = 300
+
+    cnt = Counter()
+    for s in query:
+        cnt[s] = 0
+
+    text = []
+    targets = []
+    target_cnt = 0
+
+    pos = 0
+    word = []
+    sep = False
+    for c in pure_text:
+        if is_valid_symbol(c) or c == ' ́':
+            sep = False
+            word.append(c)
+        else:
+            if not sep:
+                sep = True
+                s = normalize(''.join(word))
+                if s in cnt:
+                    if cnt[s] == 0:
+                        target_cnt += 1
+                        cnt[s] = target_cnt
+                    # word.insert(0, '<b>')
+                    # word.append('</b>')
+                    targets.append((pos, cnt[s]))
+            if len(word):
+                text.append(''.join(word))
+                word = []
+                pos += 1
+            text.append(c)
+            pos += 1
+
+    if len(word):
+        s = normalize(''.join(word))
+        if s in cnt:
+            if cnt[s] == 0:
+                target_cnt += 1
+                cnt[s] = target_cnt
+            # word.insert(0, '<b>')
+            # word.append('</b>')
+            targets.append((pos, cnt[s]))
+        text.append(''.join(word))
+
+    if target_cnt == 0:
+        return title, ' '.join(text[:50] + ['...']), art_id
+
+    min_range = len(text) + 1
+    best_l = -1
+    best_r = -1
+
+    cur_cnt = 0
+    cnt = Counter()
+
+    l = 0
+    r = -1
+    while True:
+        if cur_cnt == target_cnt:
+            if targets[r][0] - targets[l][0] < min_range:
+                min_range = targets[r][0] - targets[l][0]
+                best_l, best_r = l, r
+            cnt[targets[l][1]] -= 1
+            if cnt[targets[l][1]] == 0:
+                cur_cnt -= 1
+            l += 1
+        else:
+            if r < len(targets) - 1:
+                r += 1
+                if cnt[targets[r][1]] == 0:
+                    cur_cnt += 1
+                cnt[targets[r][1]] += 1
+            else:
+                break
+
+    delta = 1
+    best_snippet = []
+    q = set(query)
+
+    while True:
+        snippet = []
+        if targets[best_l][0] - delta > 0:
+            snippet.append('...')
+        snippet += text[max(targets[best_l][0] - delta, 0) : min(targets[best_r][0] + delta + 1, len(text))]
+        if targets[best_r][0] + delta + 1 < len(text):
+            snippet.append('...')
+
+        cutted_snippet = []
+        if targets[best_l][0] - delta > 0:
+            cutted_snippet.append('...')
+        d = delta
+        for i in range(max(targets[best_l][0] - delta, 0), min(targets[best_r][0] + delta + 1, len(text))):
+            if normalize(text[i]) in q:
+                d = delta
+                cutted_snippet.append(text[i])
+                continue
+            if d > 0:
+                cutted_snippet.append(text[i])
+                d -= 1
+                if d == 0:
+                    cutted_snippet.append('...')
+
+        la = len(''.join(snippet))
+        lb = len(''.join(cutted_snippet))
+        if lb <= MAX_SNIPPET_LENGTH:
+            best_snippet = cutted_snippet
+        if la <= MAX_SNIPPET_LENGTH:
+            best_snippet = snippet
+
+        if lb >= min(MAX_SNIPPET_LENGTH, len(pure_text)):
+            break
+
+        delta += 5
+
+    if len(best_snippet) == 0:
+        best_snippet = ' '.join(text[:50] + ['...'])
+    else:
+        best_snippet = ''.join(best_snippet)
+
+    return (title, best_snippet, art_id)
 
 
 @app.route('/search')
@@ -220,7 +348,6 @@ def search():
     start = time.time()
     query = request.args.get('query')
     print('raw query:', query)
-    print(tok_to_int.get(normalize(query), 0))
     try:
         offset = int(request.args.get('offset', 0))
     except:
@@ -229,7 +356,7 @@ def search():
         return "Wrong request"
     if len(query) > 500:
         return "Too long request"
-    q_toks, boolean = parse_req(query)
+    q_toks, boolean, tok_st = parse_req(query)
     if len(q_toks) == 0:
         return 'Empty request'
     print('toks =', q_toks)
@@ -250,7 +377,7 @@ def search():
         path_to_file = '../Articles/ver3/{}/wiki_{}'.format(cur_str[:2], 
                                                             cur_str[2:4])
         lines_to_skip = int(cur_str[4:])
-        title, snippet, art_id = get_title(path_to_file, lines_to_skip)
+        title, snippet, art_id = get_title(path_to_file, lines_to_skip, tok_st)
         search_result.append((title, snippet, art_id))
     return render_template("serp.html", query=query, 
                                          search_result=search_result,

@@ -57,10 +57,9 @@ int main(int argc, char **argv) {
         }
         else {
             if (cur.l < pl) {
-                printf("OBOSRALSYA %d %d %d\n", cur.l, cur.r, cur.c);
+                printf("!! %d %d %d\n", cur.l, cur.r, cur.c);
                 return 0;
             }
-            all++;
             printf("%d %d %lld\n", pl, pr, curCnt);
             pl = cur.l;
             pr = cur.r;
@@ -70,7 +69,5 @@ int main(int argc, char **argv) {
             st.insert(cur);
         }
     }
-    all++;
     printf("%d %d %lld\n", pl, pr, curCnt);
-    printf("All = %lld\n", all);
 }
