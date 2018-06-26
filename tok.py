@@ -94,7 +94,7 @@ def parse_file(file_name):
 
 def parse_dir(dir_name):
     # path = Path(os.path.join('Index/Parts', dir_name))
-    # path.parent.mkdir(parents=True, exist_ok=True)
+    # path.mkdir(parents=True, exist_ok=True)
     for name in os.listdir(dir_name):
         child_name = os.path.join(dir_name, name)
         if os.path.isdir(child_name):

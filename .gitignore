@@ -2,6 +2,8 @@ Index/*
 Articles/*
 Count/*
 log/*
+collocation/Count/*
+collocation/stat/*
 __pycache__/*
 *.out
 mystem
